@@ -1,0 +1,33 @@
+.game-content-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.game-price-panel,
+.game-guess-panel {
+  border: 1px solid var(--color-brand-border);
+  border-radius: 1rem;
+  padding: 1.5rem;
+}
+
+.game-price-panel {
+  background: var(--color-brand-soft);
+}
+
+.game-guess-panel {
+  background: white;
+}
+
+.game-choice-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3.5rem;
+}
+
+@media (min-width: 768px) {
+  .game-content-grid {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  }
+}

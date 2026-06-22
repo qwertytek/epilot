@@ -1,0 +1,20 @@
+.app-shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(
+      ellipse 52% 38% at 34% 30%,
+      color-mix(in srgb, var(--color-brand-secondary) 13%, transparent),
+      transparent 100%
+    ),
+    radial-gradient(
+      ellipse 48% 40% at 62% 31%,
+      color-mix(in srgb, var(--color-brand-primary) 12%, transparent),
+      transparent 100%
+    ),
+    radial-gradient(
+      ellipse 42% 36% at 78% 33%,
+      color-mix(in srgb, var(--color-brand-blueSoft) 82%, transparent),
+      transparent 100%
+    ),
+    var(--color-brand-soft);
+}
