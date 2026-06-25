@@ -1,5 +1,13 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "description": ""
+  "private": true,
+  "description": "Lambda backend",
+  "scripts": {
+    "build": "sam build",
+    "start": "sam build && sam local start-api"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
 }
