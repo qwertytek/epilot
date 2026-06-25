@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { GuessDirection } from '@epilot/api-contract';
 
 import { Button } from '../../shared/components/Button';
+import { useResolveCountdown } from '../../hooks/useResolveCountdown';
 import {
   formatCurrencyUsd,
   formatDateTime,
@@ -27,23 +28,8 @@ const GamePage = () => {
   const gameStateQuery = useGameStateQuery(userId);
   const createGuessMutation = useCreateGuessMutation(userId);
   const resolveGuessMutation = useResolveGuessMutation(userId);
-  const [now, setNow] = useState(() => Date.now());
 
   const gameState = gameStateQuery.data ?? null;
-
-  useEffect(() => {
-    if (!gameState?.activeGuess) {
-      return undefined;
-    }
-
-    const interval = window.setInterval(() => {
-      setNow(Date.now());
-    }, 1_000);
-
-    return () => {
-      window.clearInterval(interval);
-    };
-  }, [gameState?.activeGuess]);
 
   const feedback = useMemo(
     () => (gameState ? getFeedbackMessage(gameState.feedback) : null),
@@ -54,11 +40,10 @@ const GamePage = () => {
   const isSubmitting = createGuessMutation.isPending;
   const isResolving = resolveGuessMutation.isPending;
   const isBusy = gameStateQuery.isLoading || isSubmitting || isResolving;
-  const resolveWaitMs = activeGuess
-    ? Math.max(0, Date.parse(activeGuess.eligibleAt) - now)
-    : 0;
-  const canResolve = activeGuess !== null && resolveWaitMs === 0 && !isBusy;
-  const resolveWaitSeconds = Math.ceil(resolveWaitMs / 1_000);
+  const { canResolve, resolveWaitSeconds } = useResolveCountdown(
+    activeGuess,
+    isBusy,
+  );
   const error =
     gameStateQuery.error ??
     createGuessMutation.error ??
