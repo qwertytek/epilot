@@ -1,26 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
-import type {
-  Feedback,
-  GameStateResponse,
-  GuessDirection,
-} from '@epilot/api-contract';
+import type { Feedback, GuessDirection } from '@epilot/api-contract';
 
 import { Button } from '../../shared/components/Button';
-import {
-  GameApiError,
-  createGuess,
-  getGameState,
-  resolveGuess,
-} from './game.api';
+import { GameApiError, getAnonymousUserId } from './game.api';
 import { GameFeedback } from './components/GameFeedback';
 import { GameHeader } from './components/GameHeader';
 import { GuessControls } from './components/GuessControls';
 import { PendingGuess } from './components/PendingGuess';
 import { PriceDisplay } from './components/PriceDisplay';
+import {
+  useCreateGuessMutation,
+  useGameStateQuery,
+  useResolveGuessMutation,
+} from './game.queries';
 
 import './game.css';
-
-type RequestState = 'idle' | 'loading' | 'submitting' | 'resolving';
 
 const currencyFormatter = new Intl.NumberFormat('en-US', {
   currency: 'USD',
@@ -75,9 +69,6 @@ const getFeedbackMessage = (
     case 'NONE':
       return null;
   }
-
-  const exhaustiveFeedback: never = feedback;
-  return exhaustiveFeedback;
 };
 
 const getErrorMessage = (error: unknown) => {
@@ -93,47 +84,13 @@ const getErrorMessage = (error: unknown) => {
 };
 
 const GamePage = () => {
-  const [gameState, setGameState] = useState<GameStateResponse | null>(null);
-  const [requestState, setRequestState] = useState<RequestState>('loading');
-  const [pendingDirection, setPendingDirection] = useState<
-    GuessDirection | undefined
-  >();
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const userId = getAnonymousUserId();
+  const gameStateQuery = useGameStateQuery(userId);
+  const createGuessMutation = useCreateGuessMutation(userId);
+  const resolveGuessMutation = useResolveGuessMutation(userId);
   const [now, setNow] = useState(() => Date.now());
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadGameState = async () => {
-      try {
-        setRequestState('loading');
-        const state = await getGameState();
-
-        if (!isMounted) {
-          return;
-        }
-
-        setGameState(state);
-        setErrorMessage(null);
-      } catch (error) {
-        if (!isMounted) {
-          return;
-        }
-
-        setErrorMessage(getErrorMessage(error));
-      } finally {
-        if (isMounted) {
-          setRequestState('idle');
-        }
-      }
-    };
-
-    void loadGameState();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const gameState = gameStateQuery.data ?? null;
 
   useEffect(() => {
     if (!gameState?.activeGuess) {
@@ -155,31 +112,31 @@ const GamePage = () => {
   );
 
   const activeGuess = gameState?.activeGuess ?? null;
-  const isBusy = requestState !== 'idle';
+  const isSubmitting = createGuessMutation.isPending;
+  const isResolving = resolveGuessMutation.isPending;
+  const isBusy = gameStateQuery.isLoading || isSubmitting || isResolving;
   const resolveWaitMs = activeGuess
     ? Math.max(0, Date.parse(activeGuess.eligibleAt) - now)
     : 0;
   const canResolve = activeGuess !== null && resolveWaitMs === 0 && !isBusy;
   const resolveWaitSeconds = Math.ceil(resolveWaitMs / 1_000);
+  const error =
+    gameStateQuery.error ??
+    createGuessMutation.error ??
+    resolveGuessMutation.error;
+  const pendingDirection = createGuessMutation.variables?.direction;
+  const hasNoGameState =
+    !gameStateQuery.isLoading && !gameStateQuery.isError && gameState === null;
 
   const handleGuess = async (direction: GuessDirection) => {
     if (gameState === null || activeGuess !== null || isBusy) {
       return;
     }
 
-    try {
-      setRequestState('submitting');
-      setPendingDirection(direction);
-      setGameState(
-        await createGuess(direction, gameState.latestPrice.priceSnapshotId),
-      );
-      setErrorMessage(null);
-    } catch (error) {
-      setErrorMessage(getErrorMessage(error));
-    } finally {
-      setPendingDirection(undefined);
-      setRequestState('idle');
-    }
+    createGuessMutation.mutate({
+      direction,
+      priceSnapshotId: gameState.latestPrice.priceSnapshotId,
+    });
   };
 
   const handleResolve = async () => {
@@ -187,15 +144,7 @@ const GamePage = () => {
       return;
     }
 
-    try {
-      setRequestState('resolving');
-      setGameState(await resolveGuess());
-      setErrorMessage(null);
-    } catch (error) {
-      setErrorMessage(getErrorMessage(error));
-    } finally {
-      setRequestState('idle');
-    }
+    resolveGuessMutation.mutate();
   };
 
   return (
@@ -205,11 +154,22 @@ const GamePage = () => {
           <GameHeader score={gameState?.score ?? 0} />
 
           <div className="mt-6 grid gap-3" aria-live="polite">
-            {requestState === 'loading' && gameState === null ? (
+            {gameStateQuery.isLoading ? (
               <GameFeedback message="Loading live game state..." />
             ) : null}
-            {errorMessage ? (
-              <GameFeedback message={errorMessage} tone="error" />
+            {hasNoGameState ? (
+              <GameFeedback message="No game state is available yet." />
+            ) : null}
+            {error ? (
+              <GameFeedback message={getErrorMessage(error)} tone="error" />
+            ) : null}
+            {gameState && gameStateQuery.isFetching ? (
+              <GameFeedback message="Refreshing live price in the background..." />
+            ) : null}
+            {gameState &&
+            gameStateQuery.isStale &&
+            !gameStateQuery.isFetching ? (
+              <GameFeedback message="Showing cached game state while the latest price is stale." />
             ) : null}
             {feedback ? <GameFeedback {...feedback} /> : null}
           </div>
@@ -235,7 +195,7 @@ const GamePage = () => {
                   eligibleAt={formatDateTime(activeGuess.eligibleAt)}
                 />
                 <Button disabled={!canResolve} onClick={handleResolve}>
-                  {requestState === 'resolving'
+                  {isResolving
                     ? 'Resolving...'
                     : resolveWaitSeconds > 0
                       ? `Resolve in ${resolveWaitSeconds}s`
