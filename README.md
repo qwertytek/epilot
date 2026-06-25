@@ -44,6 +44,7 @@ Backend configuration is read from `SNAPSHOT_SIGNING_SECRET`, `COINGECKO_PRICE_U
 ## Documentation
 
 See the [client README](./client/README.md) for client-specific setup and structure.
+See the [server README](./server/README.md) for server-specific setup and structure.
 
 ## Quality checks
 
