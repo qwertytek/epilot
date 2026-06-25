@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { Feedback, GuessDirection } from '@epilot/api-contract';
+import type { GuessDirection } from '@epilot/api-contract';
 
 import { Button } from '../../shared/components/Button';
 import {
@@ -17,42 +17,9 @@ import {
   useGameStateQuery,
   useResolveGuessMutation,
 } from './game.queries';
+import { getFeedbackMessage } from './game.feedback';
 
 import './game.css';
-
-const getFeedbackMessage = (
-  feedback: Feedback,
-): { message: string; tone?: 'neutral' | 'success' | 'error' } | null => {
-  switch (feedback.type) {
-    case 'GUESS_CREATED':
-      return {
-        message:
-          'Guess submitted. Resolve it once the eligibility time passes.',
-      };
-    case 'NOT_READY':
-      return {
-        message: `Not ready yet. Try again after ${formatDateTime(
-          feedback.retryAt,
-        )}.`,
-      };
-    case 'PRICE_UNCHANGED':
-      return {
-        message: 'The price was unchanged, so the guess is still open.',
-      };
-    case 'RESOLVED':
-      return {
-        message:
-          feedback.outcome === 'CORRECT'
-            ? `Correct prediction. Score ${feedback.scoreDelta > 0 ? '+' : ''}${
-                feedback.scoreDelta
-              }.`
-            : `Incorrect prediction. Score ${feedback.scoreDelta}.`,
-        tone: feedback.outcome === 'CORRECT' ? 'success' : 'error',
-      };
-    case 'NONE':
-      return null;
-  }
-};
 
 const getErrorMessage = (error: unknown) => {
   if (error instanceof GameApiError) {
