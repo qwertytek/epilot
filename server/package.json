@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "Lambda backend",
+  "type": "module",
   "scripts": {
     "build": "sam build",
     "start": "sam build && sam local start-api"
