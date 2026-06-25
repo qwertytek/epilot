@@ -120,6 +120,15 @@ test('OPTIONS preflight returns CORS headers without x-user-id', async () => {
   );
 });
 
+test('unknown API route returns 404 INVALID_REQUEST', async () => {
+  const { handler } = createTestHandler();
+  const response = await handler(event('GET', '/missing'));
+  const body = json<ApiErrorResponse>(response);
+
+  assert.equal(response.statusCode, 404);
+  assert.equal(body.code, 'INVALID_REQUEST');
+});
+
 test('first GET /state returns score 0, no active guess, and a price snapshot', async () => {
   const { handler } = createTestHandler([101]);
   const response = await handler(
@@ -202,6 +211,18 @@ test('tampered snapshot token is rejected', async () => {
   assert.equal(body.code, 'PRICE_SNAPSHOT_INVALID');
 });
 
+test('malformed guess request body returns 422 INVALID_REQUEST', async () => {
+  const { handler } = createTestHandler([100]);
+  const response = await handler({
+    ...event('POST', '/guesses'),
+    body: '{not json',
+  });
+  const body = json<ApiErrorResponse>(response);
+
+  assert.equal(response.statusCode, 422);
+  assert.equal(body.code, 'INVALID_REQUEST');
+});
+
 test('user cannot submit a raw price', async () => {
   const { handler } = createTestHandler([100]);
   const response = await handler(
@@ -273,6 +294,15 @@ test('guess cannot resolve before 60 seconds', async () => {
   assert.equal(body.activeGuess?.direction, 'up');
 });
 
+test('resolve without an active guess returns 409 NO_ACTIVE_GUESS', async () => {
+  const { handler } = createTestHandler([100]);
+  const response = await handler(event('POST', '/guesses/resolve'));
+  const body = json<ApiErrorResponse>(response);
+
+  assert.equal(response.statusCode, 409);
+  assert.equal(body.code, 'NO_ACTIVE_GUESS');
+});
+
 test('guess remains pending when observed price is unchanged', async () => {
   const context = createTestHandler([100, 100]);
   const state = json<GameStateResponse>(
@@ -313,6 +343,26 @@ test('correct guess increments score', async () => {
   assert.equal(body.status, 'RESOLVED');
   assert.equal(body.score, 1);
   assert.equal(body.activeGuess, undefined);
+});
+
+test('correct down guess increments score', async () => {
+  const context = createTestHandler([100, 99]);
+  const state = json<GameStateResponse>(
+    await context.handler(event('GET', '/state')),
+  );
+  await context.handler(
+    event('POST', '/guesses', {
+      direction: 'down',
+      priceSnapshotId: state.priceSnapshot.priceSnapshotId,
+    }),
+  );
+  context.advance(60_000);
+
+  const response = await context.handler(event('POST', '/guesses/resolve'));
+  const body = json<ResolveGuessResponse>(response);
+
+  assert.equal(body.status, 'RESOLVED');
+  assert.equal(body.score, 1);
 });
 
 test('incorrect guess decrements score', async () => {
