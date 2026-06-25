@@ -17,7 +17,7 @@ class GameApiError extends Error {
     readonly status: number,
     readonly error: ApiErrorResponse,
   ) {
-    super(error.message);
+    super(error.error.message);
   }
 }
 

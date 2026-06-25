@@ -93,7 +93,7 @@ test('DynamoDB player store preserves existing score and active guess', async ()
     score: 3,
     activeGuess: {
       id: 'guess-1',
-      direction: 'down',
+      direction: 'DOWN',
       startPriceUsd: 100,
       createdAt: '2026-06-25T12:00:00.000Z',
       eligibleAt: '2026-06-25T12:01:00.000Z',
@@ -150,13 +150,13 @@ test('DynamoDB player store persists active guess with generated id', async () =
   });
 
   const player = await store.createGuess('user-1', {
-    direction: 'up',
+    direction: 'UP',
     startPriceUsd: 101,
     createdAt: '2026-06-25T12:00:10.000Z',
     eligibleAt: '2026-06-25T12:01:10.000Z',
   });
 
-  assert.equal(player.activeGuess?.direction, 'up');
+  assert.equal(player.activeGuess?.direction, 'UP');
   assert.equal(player.activeGuess?.startPriceUsd, 101);
   assert.equal(typeof player.activeGuess?.id, 'string');
   assert.equal(
@@ -172,7 +172,7 @@ test('DynamoDB player store maps conditional create failure to active guess conf
     score: 0,
     activeGuess: {
       id: 'guess-1',
-      direction: 'up',
+      direction: 'UP',
       startPriceUsd: 100,
       createdAt: '2026-06-25T12:00:00.000Z',
       eligibleAt: '2026-06-25T12:01:00.000Z',
@@ -190,7 +190,7 @@ test('DynamoDB player store maps conditional create failure to active guess conf
 
   await assert.rejects(
     store.createGuess('user-1', {
-      direction: 'down',
+      direction: 'DOWN',
       startPriceUsd: 101,
       createdAt: '2026-06-25T12:00:30.000Z',
       eligibleAt: '2026-06-25T12:01:30.000Z',
@@ -212,7 +212,7 @@ test('DynamoDB player store maps conditional resolve failure to no active guess'
     store.resolveGuess('user-1', {
       activeGuess: {
         id: 'guess-1',
-        direction: 'up',
+        direction: 'UP',
         startPriceUsd: 100,
         createdAt: '2026-06-25T12:00:00.000Z',
         eligibleAt: '2026-06-25T12:01:00.000Z',
@@ -240,7 +240,7 @@ test('DynamoDB player store conditionally resolves and removes activeGuess', asy
   const player = await store.resolveGuess('user-1', {
     activeGuess: {
       id: 'guess-1',
-      direction: 'up',
+      direction: 'UP',
       startPriceUsd: 100,
       createdAt: '2026-06-25T12:00:00.000Z',
       eligibleAt: '2026-06-25T12:01:00.000Z',
@@ -285,7 +285,7 @@ test('DynamoDB player store repeated resolve cannot score twice', async () => {
   const input = {
     activeGuess: {
       id: 'guess-1',
-      direction: 'up' as const,
+      direction: 'UP' as const,
       startPriceUsd: 100,
       createdAt: '2026-06-25T12:00:00.000Z',
       eligibleAt: '2026-06-25T12:01:00.000Z',

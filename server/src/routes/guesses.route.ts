@@ -15,7 +15,7 @@ export const handleCreateGuess = async (
     parseCreateGuessRequest(parseRequestBody<unknown>(event)),
   );
 
-  return http.respond(200, body, event);
+  return http.respond(201, body, event);
 };
 
 export const handleResolveGuess = async (

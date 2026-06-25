@@ -203,20 +203,11 @@ export const createDynamoDbPlayerStore = ({
     { activeGuess, scoreDelta, updatedAt }: ResolveActiveGuessInput,
   ): Promise<Player> => {
     const { client, modules: dynamo } = await setup;
-    const condition =
-      activeGuess.id === undefined
-        ? 'activeGuess.createdAt = :createdAt'
-        : 'activeGuess.id = :guessId';
     const expressionAttributeValues: Record<string, unknown> = {
+      ':guessId': activeGuess.id,
       ':scoreDelta': scoreDelta,
       ':updatedAt': updatedAt,
     };
-
-    if (activeGuess.id === undefined) {
-      expressionAttributeValues[':createdAt'] = activeGuess.createdAt;
-    } else {
-      expressionAttributeValues[':guessId'] = activeGuess.id;
-    }
 
     try {
       const response = await client.send<DynamoUpdateResponse>(
@@ -225,7 +216,7 @@ export const createDynamoDbPlayerStore = ({
           Key: { userId },
           UpdateExpression:
             'SET score = score + :scoreDelta, updatedAt = :updatedAt REMOVE activeGuess',
-          ConditionExpression: condition,
+          ConditionExpression: 'activeGuess.id = :guessId',
           ExpressionAttributeValues: expressionAttributeValues,
           ReturnValues: 'ALL_NEW',
         }),

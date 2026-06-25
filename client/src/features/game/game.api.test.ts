@@ -39,10 +39,10 @@ const installBrowserMocks = () => {
         json: async () => ({
           userId: 'generated-user-id',
           score: 0,
-          priceSnapshot: {
+          latestPrice: {
             priceSnapshotId: 'snapshot-token',
             priceUsd: 100,
-            issuedAt: '2026-06-25T12:00:00.000Z',
+            observedAt: '2026-06-25T12:00:00.000Z',
             expiresAt: '2026-06-25T12:00:30.000Z',
           },
         }),
@@ -76,12 +76,12 @@ test('getGameState sends x-user-id to the state endpoint', async () => {
 test('createGuess submits direction and priceSnapshotId without a raw price', async () => {
   const { fetchCalls } = installBrowserMocks();
 
-  await createGuess('up', 'snapshot-token');
+  await createGuess('UP', 'snapshot-token');
 
   assert.equal(fetchCalls[0]?.url, 'http://127.0.0.1:3000/guesses');
   assert.equal(fetchCalls[0]?.init.method, 'POST');
   assert.deepEqual(JSON.parse(fetchCalls[0]?.init.body as string), {
-    direction: 'up',
+    direction: 'UP',
     priceSnapshotId: 'snapshot-token',
   });
 });

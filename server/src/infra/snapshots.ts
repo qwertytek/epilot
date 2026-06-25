@@ -7,7 +7,7 @@ import type { PriceProvider } from '../types.js';
 
 type SnapshotPayload = {
   priceUsd: number;
-  issuedAt: string;
+  observedAt: string;
   expiresAt: string;
 };
 
@@ -66,7 +66,7 @@ export const parseSnapshotToken = (
     if (
       typeof payload.priceUsd !== 'number' ||
       !Number.isFinite(payload.priceUsd) ||
-      Number.isNaN(Date.parse(payload.issuedAt)) ||
+      Number.isNaN(Date.parse(payload.observedAt)) ||
       Number.isNaN(Date.parse(payload.expiresAt))
     ) {
       throw new ApiError(422, 'PRICE_SNAPSHOT_INVALID');
@@ -95,11 +95,11 @@ export const createPriceSnapshotFactory =
   ) =>
   async (): Promise<PriceSnapshot> => {
     const priceUsd = await getPrice();
-    const issuedAt = now();
-    const expiresAt = new Date(issuedAt.getTime() + snapshotValidityMs);
+    const observedAt = now();
+    const expiresAt = new Date(observedAt.getTime() + snapshotValidityMs);
     const payload: SnapshotPayload = {
       priceUsd,
-      issuedAt: issuedAt.toISOString(),
+      observedAt: observedAt.toISOString(),
       expiresAt: expiresAt.toISOString(),
     };
 

@@ -23,7 +23,7 @@ export const parseRequestBody = <T>(event: ApiGatewayEvent): T => {
 };
 
 const isGuessDirection = (value: unknown): value is GuessDirection =>
-  value === 'up' || value === 'down';
+  value === 'UP' || value === 'DOWN';
 
 export const parseCreateGuessRequest = (value: unknown): CreateGuessRequest => {
   if (value === null || typeof value !== 'object') {
@@ -31,8 +31,10 @@ export const parseCreateGuessRequest = (value: unknown): CreateGuessRequest => {
   }
 
   const request = value as Record<string, unknown>;
+  const requestKeys = Object.keys(request);
 
   if (
+    requestKeys.length !== 2 ||
     !isGuessDirection(request.direction) ||
     typeof request.priceSnapshotId !== 'string'
   ) {

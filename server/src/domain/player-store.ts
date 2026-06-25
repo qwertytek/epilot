@@ -1,7 +1,9 @@
+import { randomUUID } from 'node:crypto';
+
 import type { ActiveGuess, GuessDirection } from '@epilot/api-contract';
 
 export type StoredActiveGuess = ActiveGuess & {
-  id?: string;
+  id: string;
 };
 
 export type Player = {
@@ -13,9 +15,8 @@ export type Player = {
 };
 
 export type PublicPlayerState = {
-  userId: string;
   score: number;
-  activeGuess?: ActiveGuess;
+  activeGuess: ActiveGuess | null;
 };
 
 export type CreateActiveGuessInput = {
@@ -46,12 +47,13 @@ export type PlayerStore = {
 
 export const toPublicPlayerState = (player: Player): PublicPlayerState => {
   const state: PublicPlayerState = {
-    userId: player.userId,
     score: player.score,
+    activeGuess: null,
   };
 
   if (player.activeGuess !== undefined) {
     state.activeGuess = {
+      id: player.activeGuess.id,
       direction: player.activeGuess.direction,
       startPriceUsd: player.activeGuess.startPriceUsd,
       createdAt: player.activeGuess.createdAt,
@@ -94,7 +96,10 @@ export const createPlayerStore = (
       throw new Error('ACTIVE_GUESS_EXISTS');
     }
 
-    player.activeGuess = activeGuess;
+    player.activeGuess = {
+      id: randomUUID(),
+      ...activeGuess,
+    };
     player.updatedAt = activeGuess.createdAt;
 
     return player;
