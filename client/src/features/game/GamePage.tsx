@@ -2,6 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Feedback, GuessDirection } from '@epilot/api-contract';
 
 import { Button } from '../../shared/components/Button';
+import {
+  formatCurrencyUsd,
+  formatDateTime,
+} from '../../shared/utils/formatters';
 import { GameApiError, getAnonymousUserId } from './game.api';
 import { GameFeedback } from './components/GameFeedback';
 import { GameHeader } from './components/GameHeader';
@@ -15,27 +19,6 @@ import {
 } from './game.queries';
 
 import './game.css';
-
-const currencyFormatter = new Intl.NumberFormat('en-US', {
-  currency: 'USD',
-  maximumFractionDigits: 2,
-  style: 'currency',
-});
-
-const dateFormatter = new Intl.DateTimeFormat(undefined, {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-});
-
-const formatDateTime = (value: string) => {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return dateFormatter.format(date);
-};
 
 const getFeedbackMessage = (
   feedback: Feedback,
@@ -178,7 +161,7 @@ const GamePage = () => {
             <PriceDisplay
               price={
                 gameState
-                  ? currencyFormatter.format(gameState.latestPrice.priceUsd)
+                  ? formatCurrencyUsd(gameState.latestPrice.priceUsd)
                   : '...'
               }
               updatedAt={
