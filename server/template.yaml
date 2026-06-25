@@ -8,11 +8,33 @@ Resources:
       CodeUri: .
       Handler: handler.handler
       Runtime: nodejs22.x
+      Environment:
+        Variables:
+          COINGECKO_PRICE_URL: https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd
+          GUESS_ELIGIBILITY_MS: '60000'
+          PROVIDER_CACHE_TTL_MS: '10000'
+          SNAPSHOT_SIGNING_SECRET: local-dev-snapshot-signing-secret
+          SNAPSHOT_VALIDITY_MS: '30000'
       Events:
         Health:
           Type: HttpApi
           Properties:
             Path: /health
             Method: get
+        State:
+          Type: HttpApi
+          Properties:
+            Path: /state
+            Method: get
+        CreateGuess:
+          Type: HttpApi
+          Properties:
+            Path: /guesses
+            Method: post
+        ResolveGuess:
+          Type: HttpApi
+          Properties:
+            Path: /guesses/resolve
+            Method: post
     Metadata:
       BuildMethod: makefile

@@ -1,4 +1,6 @@
-export type GuessDirection = 'up' | 'down';
+import type { GuessDirection } from '@epilot/api-contract';
+
+export type { GuessDirection };
 
 export type GameHeaderProps = {
   score: number;

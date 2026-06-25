@@ -5,10 +5,16 @@
   "description": "Lambda backend",
   "type": "module",
   "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "tsc --build ../packages/api-contract tsconfig.json && node --test 'dist/**/*.test.js'",
     "build": "sam build",
     "start": "sam build && sam local start-api"
   },
+  "dependencies": {
+    "@epilot/api-contract": "workspace:*"
+  },
   "devDependencies": {
+    "@types/node": "^24.0.0",
     "typescript": "^6.0.3"
   }
 }

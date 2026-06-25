@@ -1,4 +1,8 @@
 {
   "files": [],
-  "references": [{ "path": "./server" }, { "path": "./client" }]
+  "references": [
+    { "path": "./packages/api-contract" },
+    { "path": "./server" },
+    { "path": "./client" }
+  ]
 }

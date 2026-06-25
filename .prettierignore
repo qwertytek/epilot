@@ -1,5 +1,7 @@
 node_modules/
 dist/
+dist-test/
 coverage/
+*.tsbuildinfo
 pnpm-lock.yaml
 .aws-sam/

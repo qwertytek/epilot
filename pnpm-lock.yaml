@@ -231,6 +231,9 @@ importers:
 
   client:
     dependencies:
+      '@epilot/api-contract':
+        specifier: workspace:*
+        version: link:../packages/api-contract
       react:
         specifier: ^19.2.7
         version: 19.2.7
@@ -246,7 +249,10 @@ importers:
         version: 4.3.1
       '@tailwindcss/vite':
         specifier: ^4.3.1
-        version: 4.3.1(vite@8.0.16(jiti@2.7.0))
+        version: 4.3.1(vite@8.0.16(@types/node@24.13.2)(jiti@2.7.0))
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.13.2
       '@types/react':
         specifier: ^19.2.17
         version: 19.2.17
@@ -255,16 +261,25 @@ importers:
         version: 19.2.3(@types/react@19.2.17)
       '@vitejs/plugin-react':
         specifier: ^6.0.2
-        version: 6.0.2(vite@8.0.16(jiti@2.7.0))
+        version: 6.0.2(vite@8.0.16(@types/node@24.13.2)(jiti@2.7.0))
       postcss:
         specifier: ^8.5.15
         version: 8.5.15
       vite:
         specifier: ^8.0.16
-        version: 8.0.16(jiti@2.7.0)
+        version: 8.0.16(@types/node@24.13.2)(jiti@2.7.0)
+
+  packages/api-contract: {}
 
   server:
+    dependencies:
+      '@epilot/api-contract':
+        specifier: workspace:*
+        version: link:../packages/api-contract
     devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.13.2
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -574,6 +589,9 @@ packages:
 
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
+
+  '@types/node@24.13.2':
+    resolution: {integrity: sha512-fRa09kZTgu8o71KFcDjUFuc7F+dEbZYZmkI0mg5YBTRs0yMKjYHsq/c0urDKeDb+D5qVgXOdFcuu+DZPKOITwA==}
 
   '@types/react-dom@19.2.3':
     resolution: {integrity: sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ==}
@@ -1058,6 +1076,9 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
+  undici-types@7.18.2:
+    resolution: {integrity: sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w==}
+
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
 
@@ -1335,12 +1356,12 @@ snapshots:
       postcss: 8.5.15
       tailwindcss: 4.3.1
 
-  '@tailwindcss/vite@4.3.1(vite@8.0.16(jiti@2.7.0))':
+  '@tailwindcss/vite@4.3.1(vite@8.0.16(@types/node@24.13.2)(jiti@2.7.0))':
     dependencies:
       '@tailwindcss/node': 4.3.1
       '@tailwindcss/oxide': 4.3.1
       tailwindcss: 4.3.1
-      vite: 8.0.16(jiti@2.7.0)
+      vite: 8.0.16(@types/node@24.13.2)(jiti@2.7.0)
 
   '@tybys/wasm-util@0.10.2':
     dependencies:
@@ -1352,6 +1373,10 @@ snapshots:
   '@types/estree@1.0.9': {}
 
   '@types/json-schema@7.0.15': {}
+
+  '@types/node@24.13.2':
+    dependencies:
+      undici-types: 7.18.2
 
   '@types/react-dom@19.2.3(@types/react@19.2.17)':
     dependencies:
@@ -1452,10 +1477,10 @@ snapshots:
       '@typescript-eslint/types': 8.61.1
       eslint-visitor-keys: 5.0.1
 
-  '@vitejs/plugin-react@6.0.2(vite@8.0.16(jiti@2.7.0))':
+  '@vitejs/plugin-react@6.0.2(vite@8.0.16(@types/node@24.13.2)(jiti@2.7.0))':
     dependencies:
       '@rolldown/pluginutils': 1.0.1
-      vite: 8.0.16(jiti@2.7.0)
+      vite: 8.0.16(@types/node@24.13.2)(jiti@2.7.0)
 
   acorn-jsx@5.3.2(acorn@8.17.0):
     dependencies:
@@ -1814,11 +1839,13 @@ snapshots:
 
   typescript@6.0.3: {}
 
+  undici-types@7.18.2: {}
+
   uri-js@4.4.1:
     dependencies:
       punycode: 2.3.1
 
-  vite@8.0.16(jiti@2.7.0):
+  vite@8.0.16(@types/node@24.13.2)(jiti@2.7.0):
     dependencies:
       lightningcss: 1.32.0
       picomatch: 4.0.4
@@ -1826,6 +1853,7 @@ snapshots:
       rolldown: 1.0.3
       tinyglobby: 0.2.17
     optionalDependencies:
+      '@types/node': 24.13.2
       fsevents: 2.3.3
       jiti: 2.7.0
 

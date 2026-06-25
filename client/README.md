@@ -29,7 +29,7 @@ The client renders a responsive static game view containing:
 - a BTC/USD price snapshot;
 - up/down prediction buttons.
 
-Reusable feedback and pending-guess components exist, but they are not yet connected to client state. The price, score, and timestamp are currently hard-coded. No API integration or game-result flow has been implemented.
+Reusable feedback and pending-guess components exist, but they are not yet connected to client state. The price, score, and timestamp are currently hard-coded. A typed API module exists for the game contract, anonymous user id, and request headers, but no game-result UI flow has been implemented.
 
 ## Structure
 
