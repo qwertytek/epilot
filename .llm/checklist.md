@@ -42,14 +42,14 @@
 
 ## DynamoDB
 
-- [ ] Add SAM/DynamoDB table resource for player state.
-- [ ] Use `userId` as the table partition key.
-- [ ] Store `score`, `activeGuess`, `createdAt`, and `updatedAt`.
-- [ ] Omit `activeGuess` when no guess is pending.
-- [ ] Use conditional update for guess creation.
-- [ ] Use conditional update for guess resolution.
-- [ ] Map conditional create failure to `409 ACTIVE_GUESS_EXISTS`.
-- [ ] Map missing active guess on resolve to `409 NO_ACTIVE_GUESS`.
+- [x] Add SAM/DynamoDB table resource for player state.
+- [x] Use `userId` as the table partition key.
+- [x] Store `score`, `activeGuess`, `createdAt`, and `updatedAt`.
+- [x] Omit `activeGuess` when no guess is pending.
+- [x] Use conditional update for guess creation.
+- [x] Use conditional update for guess resolution.
+- [x] Map conditional create failure to `409 ACTIVE_GUESS_EXISTS`.
+- [x] Map missing active guess on resolve to `409 NO_ACTIVE_GUESS`.
 
 ## Frontend integration
 
