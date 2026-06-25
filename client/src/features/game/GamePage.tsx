@@ -6,7 +6,8 @@ import {
   formatCurrencyUsd,
   formatDateTime,
 } from '../../shared/utils/formatters';
-import { GameApiError, getAnonymousUserId } from './game.api';
+import { getErrorMessage } from '../../shared/utils/errors';
+import { getAnonymousUserId } from './game.api';
 import { GameFeedback } from './components/GameFeedback';
 import { GameHeader } from './components/GameHeader';
 import { GuessControls } from './components/GuessControls';
@@ -20,18 +21,6 @@ import {
 import { getFeedbackMessage } from './game.feedback';
 
 import './game.css';
-
-const getErrorMessage = (error: unknown) => {
-  if (error instanceof GameApiError) {
-    return error.message;
-  }
-
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return 'Unable to update the game. Please try again.';
-};
 
 const GamePage = () => {
   const userId = getAnonymousUserId();
@@ -111,7 +100,13 @@ const GamePage = () => {
               <GameFeedback message="No game state is available yet." />
             ) : null}
             {error ? (
-              <GameFeedback message={getErrorMessage(error)} tone="error" />
+              <GameFeedback
+                message={getErrorMessage(
+                  error,
+                  'Unable to update the game. Please try again.',
+                )}
+                tone="error"
+              />
             ) : null}
             {gameState && gameStateQuery.isFetching ? (
               <GameFeedback message="Refreshing live price in the background..." />
