@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { createGuess, getAnonymousUserId, getGameState } from './game.api.js';
+import { getAnonymousUserId } from '../../api/identity.js';
+import { createGuess, getGameState } from './game.api.js';
 
 type FetchCall = {
   url: string;

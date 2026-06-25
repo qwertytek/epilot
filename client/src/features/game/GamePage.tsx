@@ -8,7 +8,7 @@ import {
   formatDateTime,
 } from '../../shared/utils/formatters';
 import { getErrorMessage } from '../../shared/utils/errors';
-import { getAnonymousUserId } from './game.api';
+import { getAnonymousUserId } from '../../api/identity';
 import { GameFeedback } from './components/GameFeedback';
 import { GameHeader } from './components/GameHeader';
 import { GuessControls } from './components/GuessControls';

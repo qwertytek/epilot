@@ -6,12 +6,8 @@ import {
 } from '@tanstack/react-query';
 import type { GameStateResponse, GuessDirection } from '@epilot/api-contract';
 
-import {
-  createGuess,
-  getAnonymousUserId,
-  getGameState,
-  resolveGuess,
-} from './game.api.js';
+import { createGuess, getGameState, resolveGuess } from './game.api.js';
+import { getAnonymousUserId } from '../../api/identity.js';
 
 const optimisticGuessEligibilityMs = 60_000;
 
