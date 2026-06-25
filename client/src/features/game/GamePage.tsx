@@ -49,8 +49,6 @@ const GamePage = () => {
     createGuessMutation.error ??
     resolveGuessMutation.error;
   const pendingDirection = createGuessMutation.variables?.direction;
-  const hasNoGameState =
-    !gameStateQuery.isLoading && !gameStateQuery.isError && gameState === null;
 
   const handleGuess = async (direction: GuessDirection) => {
     if (gameState === null || activeGuess !== null || isBusy) {
@@ -80,9 +78,6 @@ const GamePage = () => {
           <div className="mt-6 grid gap-3" aria-live="polite">
             {gameStateQuery.isLoading ? (
               <GameFeedback message="Loading live game state..." />
-            ) : null}
-            {hasNoGameState ? (
-              <GameFeedback message="No game state is available yet." />
             ) : null}
             {error ? (
               <GameFeedback
