@@ -14,6 +14,10 @@ type TestEvent = Parameters<ReturnType<typeof createHandler>>[0];
 
 const baseTimeMs = Date.parse('2026-06-25T12:00:00.000Z');
 const userHeaders = { 'x-user-id': 'user-1' };
+const browserHeaders = {
+  origin: 'http://localhost:5173',
+  'x-user-id': 'user-1',
+};
 
 const event = (
   method: string,
@@ -77,19 +81,57 @@ test('GET /health returns ok without x-user-id', async () => {
 
 test('GET /state without x-user-id returns 401 MISSING_USER_ID', async () => {
   const { handler } = createTestHandler();
-  const response = await handler(event('GET', '/state', undefined, {}));
+  const response = await handler(
+    event('GET', '/state', undefined, {
+      origin: 'http://localhost:5173',
+    }),
+  );
   const body = json<ApiErrorResponse>(response);
 
   assert.equal(response.statusCode, 401);
   assert.equal(body.code, 'MISSING_USER_ID');
+  assert.equal(
+    response.headers['access-control-allow-origin'],
+    'http://localhost:5173',
+  );
+});
+
+test('OPTIONS preflight returns CORS headers without x-user-id', async () => {
+  const { handler } = createTestHandler();
+  const response = await handler(
+    event('OPTIONS', '/guesses', undefined, {
+      origin: 'http://localhost:5173',
+    }),
+  );
+
+  assert.equal(response.statusCode, 204);
+  assert.equal(response.body, '');
+  assert.equal(
+    response.headers['access-control-allow-origin'],
+    'http://localhost:5173',
+  );
+  assert.equal(
+    response.headers['access-control-allow-headers'],
+    'content-type,x-user-id',
+  );
+  assert.equal(
+    response.headers['access-control-allow-methods'],
+    'GET,POST,OPTIONS',
+  );
 });
 
 test('first GET /state returns score 0, no active guess, and a price snapshot', async () => {
   const { handler } = createTestHandler([101]);
-  const response = await handler(event('GET', '/state'));
+  const response = await handler(
+    event('GET', '/state', undefined, browserHeaders),
+  );
   const body = json<GameStateResponse>(response);
 
   assert.equal(response.statusCode, 200);
+  assert.equal(
+    response.headers['access-control-allow-origin'],
+    'http://localhost:5173',
+  );
   assert.equal(body.userId, 'user-1');
   assert.equal(body.score, 0);
   assert.equal(body.activeGuess, undefined);

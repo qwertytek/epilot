@@ -37,9 +37,9 @@ The local API exposes:
 - `POST http://127.0.0.1:3000/guesses`
 - `POST http://127.0.0.1:3000/guesses/resolve`
 
-Game API routes require an `x-user-id` header. The client uses `VITE_API_BASE_URL` and defaults to `http://127.0.0.1:3000`.
+Game API routes require an `x-user-id` header. The client uses `VITE_API_BASE_URL` and defaults to `http://127.0.0.1:3000`. Local CORS allows Vite origins `http://localhost:5173` and `http://127.0.0.1:5173`.
 
-Backend configuration is read from `SNAPSHOT_SIGNING_SECRET`, `COINGECKO_PRICE_URL`, `SNAPSHOT_VALIDITY_MS`, `PROVIDER_CACHE_TTL_MS`, and `GUESS_ELIGIBILITY_MS`. Local SAM defaults are defined in `server/template.yaml`.
+Backend configuration is read from `SNAPSHOT_SIGNING_SECRET`, `COINGECKO_PRICE_URL`, `SNAPSHOT_VALIDITY_MS`, `PROVIDER_CACHE_TTL_MS`, `GUESS_ELIGIBILITY_MS`, and `CORS_ALLOWED_ORIGINS`. Local SAM defaults are defined in `server/template.yaml`.
 
 ## Documentation
 

@@ -2,6 +2,21 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 
 Resources:
+  GameApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowHeaders:
+          - content-type
+          - x-user-id
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowOrigins:
+          - http://localhost:5173
+          - http://127.0.0.1:5173
+
   ApiFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -15,25 +30,30 @@ Resources:
           PROVIDER_CACHE_TTL_MS: '10000'
           SNAPSHOT_SIGNING_SECRET: local-dev-snapshot-signing-secret
           SNAPSHOT_VALIDITY_MS: '30000'
+          CORS_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
       Events:
         Health:
           Type: HttpApi
           Properties:
+            ApiId: !Ref GameApi
             Path: /health
             Method: get
         State:
           Type: HttpApi
           Properties:
+            ApiId: !Ref GameApi
             Path: /state
             Method: get
         CreateGuess:
           Type: HttpApi
           Properties:
+            ApiId: !Ref GameApi
             Path: /guesses
             Method: post
         ResolveGuess:
           Type: HttpApi
           Properties:
+            ApiId: !Ref GameApi
             Path: /guesses/resolve
             Method: post
     Metadata:

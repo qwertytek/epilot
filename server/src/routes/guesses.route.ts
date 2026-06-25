@@ -1,0 +1,25 @@
+import {
+  parseCreateGuessRequest,
+  parseRequestBody,
+  requireUserId,
+} from './request.js';
+import type { RouteContext } from './route-context.js';
+import type { ApiGatewayEvent, Response } from '../types.js';
+
+export const handleCreateGuess = (
+  event: ApiGatewayEvent,
+  { game, http }: RouteContext,
+): Response => {
+  const body = game.createGuess(
+    requireUserId(event),
+    parseCreateGuessRequest(parseRequestBody<unknown>(event)),
+  );
+
+  return http.respond(200, body, event);
+};
+
+export const handleResolveGuess = async (
+  event: ApiGatewayEvent,
+  { game, http }: RouteContext,
+): Promise<Response> =>
+  http.respond(200, await game.resolveGuess(requireUserId(event)), event);

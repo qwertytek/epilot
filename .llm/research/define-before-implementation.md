@@ -93,7 +93,7 @@ Resolving a guess should also be conditional:
 - Update score and clear the active guess in the same write.
 - Repeated resolve requests after success must not score the same guess twice.
 
-### Recommendation
+### Recommendation (DynamoDB concurrency rule)
 
 Use a single DynamoDB player item per `x-user-id`, with score and active guess in the same item. This allows conditional updates on one item and avoids transaction complexity for the MVP.
 
