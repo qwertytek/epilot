@@ -1,6 +1,7 @@
 export const defaultSnapshotValidityMs = 30_000;
 export const defaultProviderCacheTtlMs = 10_000;
 export const defaultGuessEligibilityMs = 60_000;
+export const defaultCoinGeckoRequestTimeoutMs = 2_000;
 export const defaultCoinGeckoPriceUrl =
   'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd';
 export const defaultCorsAllowedOrigins = [

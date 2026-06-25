@@ -20,7 +20,7 @@ export const Button = ({
   ...props
 }: ButtonProps) => (
   <button
-    className={`rounded-xl px-5 py-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary ${variantClasses[variant]} ${className}`}
+    className={`rounded-xl px-5 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary ${variantClasses[variant]} ${className}`}
     type={type}
     {...props}
   >

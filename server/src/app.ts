@@ -1,4 +1,5 @@
 import {
+  defaultCoinGeckoRequestTimeoutMs,
   defaultCoinGeckoPriceUrl,
   defaultCorsAllowedOrigins,
   defaultGuessEligibilityMs,
@@ -27,8 +28,13 @@ export const createAppContext = (options: HandlerOptions = {}) => {
     options.coinGeckoPriceUrl ??
     process.env.COINGECKO_PRICE_URL ??
     defaultCoinGeckoPriceUrl;
+  const coinGeckoRequestTimeoutMs = getNumberEnv(
+    'COINGECKO_REQUEST_TIMEOUT_MS',
+    defaultCoinGeckoRequestTimeoutMs,
+  );
   const priceProvider =
-    options.priceProvider ?? createCoinGeckoPriceProvider(coinGeckoPriceUrl);
+    options.priceProvider ??
+    createCoinGeckoPriceProvider(coinGeckoPriceUrl, coinGeckoRequestTimeoutMs);
   const snapshotSigningSecret =
     options.snapshotSigningSecret ??
     process.env.SNAPSHOT_SIGNING_SECRET ??
