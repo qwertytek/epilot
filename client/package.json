@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "start": "vite",
     "test": "tsc --build tsconfig.test.json --clean && tsc --build ../packages/api-contract tsconfig.test.json && node --test 'dist-test/features/**/*.test.js'",
     "build": "vite build",
     "preview": "vite preview"
