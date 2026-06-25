@@ -1,6 +1,6 @@
 # Client
 
-The frontend for epilot's Bitcoin price-direction game. It is built with Vite, React 19, TypeScript, and Tailwind CSS 4.
+The frontend for epilot's Bitcoin price-direction game. It is built with Vite, React 19, TypeScript, Tailwind CSS 4, and TanStack Query.
 
 ## Run locally
 
@@ -13,29 +13,41 @@ pnpm --dir client dev
 
 Vite prints the local URL when the development server starts.
 
+The client calls `VITE_API_BASE_URL` when it is set and otherwise defaults to
+`http://127.0.0.1:3000`.
+
 ## Available commands
 
 ```bash
 pnpm --dir client dev      # start the development server
+pnpm --dir client test     # type-check and run client node:test tests
 pnpm --dir client build    # create a production build
 pnpm --dir client preview  # serve the production build locally
 ```
 
 ## Current scope
 
-The client renders a responsive static game view containing:
+The client renders a responsive game view connected to the backend API. It currently includes:
 
-- a market challenge header and score;
-- a BTC/USD price snapshot;
-- up/down prediction buttons.
+- a market challenge header and live score;
+- the latest BTC/USD price snapshot from `GET /state`;
+- persistent anonymous browser identity via `localStorage`;
+- `x-user-id` request headers for game API calls;
+- up/down prediction controls backed by `POST /guesses`;
+- optimistic pending-guess UI while a guess is submitted;
+- a countdown before resolving the active guess;
+- resolve handling through `POST /guesses/resolve`;
+- feedback for loading, background refresh, stale cached state, API errors, not-ready guesses, unchanged prices, and resolved score changes.
 
-Reusable feedback and pending-guess components exist, but they are not yet connected to client state. The price, score, and timestamp are currently hard-coded. A typed API module exists for the game contract, anonymous user id, and request headers, but no game-result UI flow has been implemented.
+The client API layer uses the shared `@epilot/api-contract` package for request and response types. TanStack Query owns game-state fetching, mutation cache updates, retry behavior, stale-state handling, and background refetches.
 
 ## Structure
 
 ```text
 src/
-├── app/       Application entry point and app-level styles
-├── features/  Feature-specific UI, including the game screen
-└── shared/    Reusable components and design tokens
+├── api/       HTTP client and anonymous browser identity
+├── app/       Application entry point, query client, and app-level styles
+├── features/  Feature-specific UI, API adapters, query hooks, and tests
+├── hooks/     Shared React hooks
+└── shared/    Reusable components, styles, utilities, and design tokens
 ```
