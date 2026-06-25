@@ -9,6 +9,7 @@ import {
 } from './config.js';
 import { createGameService } from './domain/game.js';
 import { createPlayerStore } from './domain/player-store.js';
+import { createDynamoDbPlayerStore } from './infra/dynamodb-player-store.js';
 import { createHttpResponder } from './infra/http.js';
 import {
   createCachedPriceProvider,
@@ -44,6 +45,12 @@ export const createAppContext = (options: HandlerOptions = {}) => {
   const corsAllowedOrigins =
     options.corsAllowedOrigins ??
     getArrayEnv('CORS_ALLOWED_ORIGINS', defaultCorsAllowedOrigins);
+  const playerTableName =
+    options.playerTableName ?? process.env.PLAYER_TABLE_NAME;
+  const dynamoDbEndpoint =
+    (options.dynamoDbEndpoint ?? process.env.DYNAMODB_ENDPOINT) || undefined;
+  const awsRegion =
+    options.awsRegion ?? process.env.AWS_REGION ?? process.env.REGION;
 
   const http = createHttpResponder(corsAllowedOrigins);
   const getPrice = createCachedPriceProvider(
@@ -57,7 +64,16 @@ export const createAppContext = (options: HandlerOptions = {}) => {
     snapshotValidityMs,
     snapshotSigningSecret,
   );
-  const players = createPlayerStore(options.players ?? new Map(), now);
+  const players =
+    options.playerStore ??
+    (playerTableName === undefined
+      ? createPlayerStore(options.players ?? new Map(), now)
+      : createDynamoDbPlayerStore({
+          tableName: playerTableName,
+          endpoint: dynamoDbEndpoint,
+          region: awsRegion,
+          now,
+        }));
   const game = createGameService({
     players,
     now,

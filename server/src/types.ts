@@ -1,4 +1,5 @@
 import type { Player } from './domain/player-store.js';
+import type { PlayerStore } from './domain/player-store.js';
 
 export type ApiGatewayEvent = {
   rawPath?: string;
@@ -30,4 +31,8 @@ export type HandlerOptions = {
   providerCacheTtlMs?: number;
   guessEligibilityMs?: number;
   players?: Map<string, Player>;
+  playerStore?: PlayerStore;
+  playerTableName?: string;
+  dynamoDbEndpoint?: string;
+  awsRegion?: string;
 };

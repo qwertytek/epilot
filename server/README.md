@@ -35,6 +35,10 @@ Domain code lives under `src/domain/`. This layer owns game behavior and player 
 
 Infrastructure code lives under `src/infra/`. This layer contains HTTP response helpers, signed price snapshots, the CoinGecko client, and provider caching. These modules are implementation details wired into the domain from `src/app.ts`.
 
+When `PLAYER_TABLE_NAME` is configured, `src/app.ts` uses the DynamoDB-backed
+player store from `src/infra/dynamodb-player-store.ts`. Without a table name,
+tests and ad hoc local handlers use the in-memory store.
+
 ## Boundaries
 
 Use these boundaries when changing the server:
@@ -59,10 +63,43 @@ Avoid importing route or infrastructure modules from `src/domain/`. Dependencies
 - `src/domain/player-store.ts`: in-memory player creation and public player projection.
 - `src/infra/price-provider.ts`: CoinGecko integration and price caching.
 - `src/infra/snapshots.ts`: signed price snapshot creation and validation.
+- `src/infra/dynamodb-player-store.ts`: DynamoDB player-state persistence and conditional writes.
 - `src/infra/http.ts`: response helpers, CORS headers, header lookup, and body parsing.
 - `src/errors.ts`: shared API error type and messages.
 - `src/config.ts`: environment parsing and defaults.
 - `src/types.ts`: server-local types.
+
+## Local DynamoDB
+
+Run DynamoDB Local from the workspace root:
+
+```bash
+pnpm dynamodb:start
+```
+
+Create the player-state table:
+
+```bash
+pnpm dynamodb:create-table
+```
+
+If the table already exists, the AWS CLI returns `ResourceInUseException`; this
+is safe to ignore for local development.
+
+Delete the local player-state table when you need a clean DynamoDB state:
+
+```bash
+pnpm dynamodb:delete-table
+```
+
+Start SAM against DynamoDB Local:
+
+```bash
+pnpm --dir server start
+```
+
+The `start` script passes `DynamoDbEndpoint=http://host.docker.internal:8000` so
+the Lambda container can reach the Compose service published on the host.
 
 ## Adding A Route
 

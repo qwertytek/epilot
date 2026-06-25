@@ -6,11 +6,11 @@ import {
 import type { RouteContext } from './route-context.js';
 import type { ApiGatewayEvent, Response } from '../types.js';
 
-export const handleCreateGuess = (
+export const handleCreateGuess = async (
   event: ApiGatewayEvent,
   { game, http }: RouteContext,
-): Response => {
-  const body = game.createGuess(
+): Promise<Response> => {
+  const body = await game.createGuess(
     requireUserId(event),
     parseCreateGuessRequest(parseRequestBody<unknown>(event)),
   );

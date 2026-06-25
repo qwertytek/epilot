@@ -1,7 +1,29 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 
+Parameters:
+  PlayerTableName:
+    Type: String
+    Default: epilot-btc-guess-players
+    Description: DynamoDB table name for player state.
+  DynamoDbEndpoint:
+    Type: String
+    Default: ''
+    Description: Optional DynamoDB endpoint override for local development.
+
 Resources:
+  PlayerTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref PlayerTableName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+
   GameApi:
     Type: AWS::Serverless::HttpApi
     Properties:
@@ -31,6 +53,11 @@ Resources:
           SNAPSHOT_SIGNING_SECRET: local-dev-snapshot-signing-secret
           SNAPSHOT_VALIDITY_MS: '30000'
           CORS_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+          PLAYER_TABLE_NAME: !Ref PlayerTableName
+          DYNAMODB_ENDPOINT: !Ref DynamoDbEndpoint
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PlayerTableName
       Events:
         Health:
           Type: HttpApi

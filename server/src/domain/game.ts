@@ -29,7 +29,7 @@ export const createGameService = ({
 }) => {
   const getState = async (userId: string): Promise<GameStateResponse> => {
     const priceSnapshot = await createPriceSnapshot();
-    const player = players.getOrCreate(userId);
+    const player = await players.getOrCreate(userId);
 
     return {
       ...players.toPublicState(player),
@@ -37,39 +37,46 @@ export const createGameService = ({
     };
   };
 
-  const createGuess = (
+  const createGuess = async (
     userId: string,
     request: CreateGuessRequest,
-  ): CreateGuessResponse => {
+  ): Promise<CreateGuessResponse> => {
     const snapshot = parsePriceSnapshot(request.priceSnapshotId);
-    const player = players.getOrCreate(userId);
+    const createdAt = now();
+    const createdAtIso = createdAt.toISOString();
+    const player = await players
+      .createGuess(userId, {
+        direction: request.direction,
+        startPriceUsd: snapshot.priceUsd,
+        createdAt: createdAtIso,
+        eligibleAt: new Date(
+          createdAt.getTime() + guessEligibilityMs,
+        ).toISOString(),
+      })
+      .catch((error: unknown) => {
+        if (error instanceof Error && error.message === 'ACTIVE_GUESS_EXISTS') {
+          throw new ApiError(409, 'ACTIVE_GUESS_EXISTS');
+        }
 
-    if (player.activeGuess !== undefined) {
-      throw new ApiError(409, 'ACTIVE_GUESS_EXISTS');
+        throw error;
+      });
+    const state = players.toPublicState(player);
+
+    if (state.activeGuess === undefined) {
+      throw new ApiError(409, 'NO_ACTIVE_GUESS');
     }
 
-    const createdAt = now();
-    player.activeGuess = {
-      direction: request.direction,
-      startPriceUsd: snapshot.priceUsd,
-      createdAt: createdAt.toISOString(),
-      eligibleAt: new Date(
-        createdAt.getTime() + guessEligibilityMs,
-      ).toISOString(),
-    };
-    player.updatedAt = createdAt.toISOString();
-
     return {
-      userId: player.userId,
-      score: player.score,
-      activeGuess: player.activeGuess,
+      userId: state.userId,
+      score: state.score,
+      activeGuess: state.activeGuess,
     };
   };
 
   const resolveGuess = async (
     userId: string,
   ): Promise<ResolveGuessResponse> => {
-    const player = players.getOrCreate(userId);
+    const player = await players.getOrCreate(userId);
     const activeGuess = player.activeGuess;
 
     if (activeGuess === undefined) {
@@ -97,13 +104,23 @@ export const createGameService = ({
         ? observedPriceUsd > activeGuess.startPriceUsd
         : observedPriceUsd < activeGuess.startPriceUsd;
 
-    player.score += guessedCorrectly ? 1 : -1;
-    delete player.activeGuess;
-    player.updatedAt = now().toISOString();
+    const resolvedPlayer = await players
+      .resolveGuess(userId, {
+        activeGuess,
+        scoreDelta: guessedCorrectly ? 1 : -1,
+        updatedAt: now().toISOString(),
+      })
+      .catch((error: unknown) => {
+        if (error instanceof Error && error.message === 'NO_ACTIVE_GUESS') {
+          throw new ApiError(409, 'NO_ACTIVE_GUESS');
+        }
+
+        throw error;
+      });
 
     return {
       status: 'RESOLVED',
-      ...players.toPublicState(player),
+      ...players.toPublicState(resolvedPlayer),
     };
   };
 

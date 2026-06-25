@@ -1,9 +1,13 @@
-import type { ActiveGuess } from '@epilot/api-contract';
+import type { ActiveGuess, GuessDirection } from '@epilot/api-contract';
+
+export type StoredActiveGuess = ActiveGuess & {
+  id?: string;
+};
 
 export type Player = {
   userId: string;
   score: number;
-  activeGuess?: ActiveGuess;
+  activeGuess?: StoredActiveGuess;
   createdAt: string;
   updatedAt: string;
 };
@@ -14,13 +18,55 @@ export type PublicPlayerState = {
   activeGuess?: ActiveGuess;
 };
 
-export type PlayerStore = ReturnType<typeof createPlayerStore>;
+export type CreateActiveGuessInput = {
+  direction: GuessDirection;
+  startPriceUsd: number;
+  createdAt: string;
+  eligibleAt: string;
+};
+
+export type ResolveActiveGuessInput = {
+  activeGuess: StoredActiveGuess;
+  scoreDelta: 1 | -1;
+  updatedAt: string;
+};
+
+export type PlayerStore = {
+  getOrCreate: (userId: string) => Promise<Player>;
+  createGuess: (
+    userId: string,
+    activeGuess: CreateActiveGuessInput,
+  ) => Promise<Player>;
+  resolveGuess: (
+    userId: string,
+    input: ResolveActiveGuessInput,
+  ) => Promise<Player>;
+  toPublicState: (player: Player) => PublicPlayerState;
+};
+
+export const toPublicPlayerState = (player: Player): PublicPlayerState => {
+  const state: PublicPlayerState = {
+    userId: player.userId,
+    score: player.score,
+  };
+
+  if (player.activeGuess !== undefined) {
+    state.activeGuess = {
+      direction: player.activeGuess.direction,
+      startPriceUsd: player.activeGuess.startPriceUsd,
+      createdAt: player.activeGuess.createdAt,
+      eligibleAt: player.activeGuess.eligibleAt,
+    };
+  }
+
+  return state;
+};
 
 export const createPlayerStore = (
   players: Map<string, Player>,
   now: () => Date,
-) => {
-  const getOrCreate = (userId: string): Player => {
+): PlayerStore => {
+  const getOrCreate = async (userId: string): Promise<Player> => {
     const existingPlayer = players.get(userId);
 
     if (existingPlayer !== undefined) {
@@ -38,18 +84,46 @@ export const createPlayerStore = (
     return player;
   };
 
-  const toPublicState = (player: Player): PublicPlayerState => {
-    const state: PublicPlayerState = {
-      userId: player.userId,
-      score: player.score,
-    };
+  const createGuess = async (
+    userId: string,
+    activeGuess: CreateActiveGuessInput,
+  ): Promise<Player> => {
+    const player = await getOrCreate(userId);
 
     if (player.activeGuess !== undefined) {
-      state.activeGuess = player.activeGuess;
+      throw new Error('ACTIVE_GUESS_EXISTS');
     }
 
-    return state;
+    player.activeGuess = activeGuess;
+    player.updatedAt = activeGuess.createdAt;
+
+    return player;
   };
 
-  return { getOrCreate, toPublicState };
+  const resolveGuess = async (
+    userId: string,
+    { activeGuess, scoreDelta, updatedAt }: ResolveActiveGuessInput,
+  ): Promise<Player> => {
+    const player = await getOrCreate(userId);
+
+    if (
+      player.activeGuess === undefined ||
+      player.activeGuess.createdAt !== activeGuess.createdAt
+    ) {
+      throw new Error('NO_ACTIVE_GUESS');
+    }
+
+    player.score += scoreDelta;
+    delete player.activeGuess;
+    player.updatedAt = updatedAt;
+
+    return player;
+  };
+
+  return {
+    getOrCreate,
+    createGuess,
+    resolveGuess,
+    toPublicState: toPublicPlayerState,
+  };
 };
