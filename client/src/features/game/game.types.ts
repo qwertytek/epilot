@@ -12,7 +12,10 @@ export type PriceDisplayProps = {
 };
 
 export type GuessControlsProps = {
+  disabled?: boolean;
   label: string;
+  onGuess: (direction: GuessDirection) => void;
+  pendingDirection?: GuessDirection;
 };
 
 export type PendingGuessProps = {

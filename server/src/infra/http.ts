@@ -67,9 +67,11 @@ export const createHttpResponder = (corsAllowedOrigins: string[]) => {
     details?: unknown,
   ): Response => {
     const body: ApiErrorResponse = {
-      code,
-      message: errorMessages[code],
-      ...(details === undefined ? {} : { details }),
+      error: {
+        code,
+        message: errorMessages[code],
+        ...(details === undefined ? {} : { details }),
+      },
     };
 
     return respond(statusCode, body, event);

@@ -33,7 +33,7 @@ const createHandler = (options: HandlerOptions = {}) => {
         );
       }
 
-      return http.respondError(500, 'INVALID_REQUEST', event);
+      return http.respondError(500, 'INTERNAL_ERROR', event);
     }
   };
 };

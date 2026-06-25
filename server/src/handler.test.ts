@@ -89,7 +89,7 @@ test('GET /state without x-user-id returns 401 MISSING_USER_ID', async () => {
   const body = json<ApiErrorResponse>(response);
 
   assert.equal(response.statusCode, 401);
-  assert.equal(body.code, 'MISSING_USER_ID');
+  assert.equal(body.error.code, 'MISSING_USER_ID');
   assert.equal(
     response.headers['access-control-allow-origin'],
     'http://localhost:5173',
@@ -126,7 +126,7 @@ test('unknown API route returns 404 INVALID_REQUEST', async () => {
   const body = json<ApiErrorResponse>(response);
 
   assert.equal(response.statusCode, 404);
-  assert.equal(body.code, 'INVALID_REQUEST');
+  assert.equal(body.error.code, 'INVALID_REQUEST');
 });
 
 test('first GET /state returns score 0, no active guess, and a price snapshot', async () => {
@@ -141,11 +141,12 @@ test('first GET /state returns score 0, no active guess, and a price snapshot', 
     response.headers['access-control-allow-origin'],
     'http://localhost:5173',
   );
-  assert.equal(body.userId, 'user-1');
   assert.equal(body.score, 0);
-  assert.equal(body.activeGuess, undefined);
-  assert.equal(body.priceSnapshot.priceUsd, 101);
-  assert.equal(typeof body.priceSnapshot.priceSnapshotId, 'string');
+  assert.equal(body.activeGuess, null);
+  assert.equal(body.feedback.type, 'NONE');
+  assert.equal(body.latestPrice.priceUsd, 101);
+  assert.equal(typeof body.latestPrice.priceSnapshotId, 'string');
+  assert.equal(body.latestPrice.observedAt, '2026-06-25T12:00:00.000Z');
 });
 
 test('repeated state calls within cache TTL avoid repeated provider calls', async () => {
@@ -157,7 +158,7 @@ test('repeated state calls within cache TTL avoid repeated provider calls', asyn
   assert.equal(first.statusCode, 200);
   assert.equal(second.statusCode, 200);
   assert.equal(context.calls, 1);
-  assert.equal(json<GameStateResponse>(second).priceSnapshot.priceUsd, 100);
+  assert.equal(json<GameStateResponse>(second).latestPrice.priceUsd, 100);
 });
 
 test('valid unexpired snapshot token can create a guess', async () => {
@@ -165,16 +166,17 @@ test('valid unexpired snapshot token can create a guess', async () => {
   const state = json<GameStateResponse>(await handler(event('GET', '/state')));
   const response = await handler(
     event('POST', '/guesses', {
-      direction: 'up',
-      priceSnapshotId: state.priceSnapshot.priceSnapshotId,
+      direction: 'UP',
+      priceSnapshotId: state.latestPrice.priceSnapshotId,
     }),
   );
   const body = json<CreateGuessResponse>(response);
 
-  assert.equal(response.statusCode, 200);
+  assert.equal(response.statusCode, 201);
   assert.equal(body.score, 0);
-  assert.equal(body.activeGuess.direction, 'up');
-  assert.equal(body.activeGuess.startPriceUsd, 100);
+  assert.equal(body.activeGuess?.direction, 'UP');
+  assert.equal(body.activeGuess?.startPriceUsd, 100);
+  assert.equal(body.feedback.type, 'GUESS_CREATED');
 });
 
 test('expired snapshot token is rejected', async () => {
@@ -186,14 +188,14 @@ test('expired snapshot token is rejected', async () => {
 
   const response = await context.handler(
     event('POST', '/guesses', {
-      direction: 'up',
-      priceSnapshotId: state.priceSnapshot.priceSnapshotId,
+      direction: 'UP',
+      priceSnapshotId: state.latestPrice.priceSnapshotId,
     }),
   );
   const body = json<ApiErrorResponse>(response);
 
   assert.equal(response.statusCode, 410);
-  assert.equal(body.code, 'PRICE_SNAPSHOT_EXPIRED');
+  assert.equal(body.error.code, 'PRICE_SNAPSHOT_EXPIRED');
 });
 
 test('tampered snapshot token is rejected', async () => {
@@ -201,14 +203,14 @@ test('tampered snapshot token is rejected', async () => {
   const state = json<GameStateResponse>(await handler(event('GET', '/state')));
   const response = await handler(
     event('POST', '/guesses', {
-      direction: 'up',
-      priceSnapshotId: `${state.priceSnapshot.priceSnapshotId}x`,
+      direction: 'UP',
+      priceSnapshotId: `${state.latestPrice.priceSnapshotId}x`,
     }),
   );
   const body = json<ApiErrorResponse>(response);
 
   assert.equal(response.statusCode, 422);
-  assert.equal(body.code, 'PRICE_SNAPSHOT_INVALID');
+  assert.equal(body.error.code, 'PRICE_SNAPSHOT_INVALID');
 });
 
 test('malformed guess request body returns 422 INVALID_REQUEST', async () => {
@@ -220,49 +222,65 @@ test('malformed guess request body returns 422 INVALID_REQUEST', async () => {
   const body = json<ApiErrorResponse>(response);
 
   assert.equal(response.statusCode, 422);
-  assert.equal(body.code, 'INVALID_REQUEST');
+  assert.equal(body.error.code, 'INVALID_REQUEST');
 });
 
 test('user cannot submit a raw price', async () => {
   const { handler } = createTestHandler([100]);
   const response = await handler(
     event('POST', '/guesses', {
-      direction: 'up',
+      direction: 'UP',
       startPriceUsd: 100,
     }),
   );
   const body = json<ApiErrorResponse>(response);
 
   assert.equal(response.statusCode, 422);
-  assert.equal(body.code, 'INVALID_REQUEST');
+  assert.equal(body.error.code, 'INVALID_REQUEST');
+});
+
+test('user cannot submit extra fields with a valid guess request', async () => {
+  const { handler } = createTestHandler([100]);
+  const state = json<GameStateResponse>(await handler(event('GET', '/state')));
+  const response = await handler(
+    event('POST', '/guesses', {
+      direction: 'UP',
+      priceSnapshotId: state.latestPrice.priceSnapshotId,
+      startPriceUsd: 100,
+    }),
+  );
+  const body = json<ApiErrorResponse>(response);
+
+  assert.equal(response.statusCode, 422);
+  assert.equal(body.error.code, 'INVALID_REQUEST');
 });
 
 test('user cannot create a second active guess', async () => {
   const { handler } = createTestHandler([100]);
   const state = json<GameStateResponse>(await handler(event('GET', '/state')));
   const payload = {
-    direction: 'up',
-    priceSnapshotId: state.priceSnapshot.priceSnapshotId,
+    direction: 'UP',
+    priceSnapshotId: state.latestPrice.priceSnapshotId,
   };
 
   assert.equal(
     (await handler(event('POST', '/guesses', payload))).statusCode,
-    200,
+    201,
   );
 
   const response = await handler(event('POST', '/guesses', payload));
   const body = json<ApiErrorResponse>(response);
 
   assert.equal(response.statusCode, 409);
-  assert.equal(body.code, 'ACTIVE_GUESS_EXISTS');
+  assert.equal(body.error.code, 'ACTIVE_GUESS_EXISTS');
 });
 
 test('concurrent create requests result in exactly one active guess', async () => {
   const { handler } = createTestHandler([100]);
   const state = json<GameStateResponse>(await handler(event('GET', '/state')));
   const payload = {
-    direction: 'up',
-    priceSnapshotId: state.priceSnapshot.priceSnapshotId,
+    direction: 'UP',
+    priceSnapshotId: state.latestPrice.priceSnapshotId,
   };
 
   const responses = await Promise.all([
@@ -272,7 +290,7 @@ test('concurrent create requests result in exactly one active guess', async () =
 
   assert.deepEqual(
     responses.map((response) => response.statusCode).sort(),
-    [200, 409],
+    [201, 409],
   );
 });
 
@@ -281,8 +299,8 @@ test('guess cannot resolve before 60 seconds', async () => {
   const state = json<GameStateResponse>(await handler(event('GET', '/state')));
   await handler(
     event('POST', '/guesses', {
-      direction: 'up',
-      priceSnapshotId: state.priceSnapshot.priceSnapshotId,
+      direction: 'UP',
+      priceSnapshotId: state.latestPrice.priceSnapshotId,
     }),
   );
 
@@ -290,8 +308,8 @@ test('guess cannot resolve before 60 seconds', async () => {
   const body = json<ResolveGuessResponse>(response);
 
   assert.equal(response.statusCode, 200);
-  assert.equal(body.status, 'NOT_READY');
-  assert.equal(body.activeGuess?.direction, 'up');
+  assert.equal(body.feedback.type, 'NOT_READY');
+  assert.equal(body.activeGuess?.direction, 'UP');
 });
 
 test('resolve without an active guess returns 409 NO_ACTIVE_GUESS', async () => {
@@ -300,7 +318,7 @@ test('resolve without an active guess returns 409 NO_ACTIVE_GUESS', async () => 
   const body = json<ApiErrorResponse>(response);
 
   assert.equal(response.statusCode, 409);
-  assert.equal(body.code, 'NO_ACTIVE_GUESS');
+  assert.equal(body.error.code, 'NO_ACTIVE_GUESS');
 });
 
 test('guess remains pending when observed price is unchanged', async () => {
@@ -310,8 +328,8 @@ test('guess remains pending when observed price is unchanged', async () => {
   );
   await context.handler(
     event('POST', '/guesses', {
-      direction: 'up',
-      priceSnapshotId: state.priceSnapshot.priceSnapshotId,
+      direction: 'UP',
+      priceSnapshotId: state.latestPrice.priceSnapshotId,
     }),
   );
   context.advance(60_000);
@@ -320,7 +338,7 @@ test('guess remains pending when observed price is unchanged', async () => {
   const body = json<ResolveGuessResponse>(response);
 
   assert.equal(response.statusCode, 200);
-  assert.equal(body.status, 'PRICE_UNCHANGED');
+  assert.equal(body.feedback.type, 'PRICE_UNCHANGED');
   assert.equal(body.activeGuess?.startPriceUsd, 100);
 });
 
@@ -331,8 +349,8 @@ test('correct guess increments score', async () => {
   );
   await context.handler(
     event('POST', '/guesses', {
-      direction: 'up',
-      priceSnapshotId: state.priceSnapshot.priceSnapshotId,
+      direction: 'UP',
+      priceSnapshotId: state.latestPrice.priceSnapshotId,
     }),
   );
   context.advance(60_000);
@@ -340,9 +358,11 @@ test('correct guess increments score', async () => {
   const response = await context.handler(event('POST', '/guesses/resolve'));
   const body = json<ResolveGuessResponse>(response);
 
-  assert.equal(body.status, 'RESOLVED');
+  assert.equal(body.feedback.type, 'RESOLVED');
   assert.equal(body.score, 1);
-  assert.equal(body.activeGuess, undefined);
+  assert.equal(body.activeGuess, null);
+  assert.equal(body.feedback.type, 'RESOLVED');
+  assert.equal(body.feedback.scoreDelta, 1);
 });
 
 test('correct down guess increments score', async () => {
@@ -352,8 +372,8 @@ test('correct down guess increments score', async () => {
   );
   await context.handler(
     event('POST', '/guesses', {
-      direction: 'down',
-      priceSnapshotId: state.priceSnapshot.priceSnapshotId,
+      direction: 'DOWN',
+      priceSnapshotId: state.latestPrice.priceSnapshotId,
     }),
   );
   context.advance(60_000);
@@ -361,7 +381,7 @@ test('correct down guess increments score', async () => {
   const response = await context.handler(event('POST', '/guesses/resolve'));
   const body = json<ResolveGuessResponse>(response);
 
-  assert.equal(body.status, 'RESOLVED');
+  assert.equal(body.feedback.type, 'RESOLVED');
   assert.equal(body.score, 1);
 });
 
@@ -372,8 +392,8 @@ test('incorrect guess decrements score', async () => {
   );
   await context.handler(
     event('POST', '/guesses', {
-      direction: 'up',
-      priceSnapshotId: state.priceSnapshot.priceSnapshotId,
+      direction: 'UP',
+      priceSnapshotId: state.latestPrice.priceSnapshotId,
     }),
   );
   context.advance(60_000);
@@ -381,7 +401,7 @@ test('incorrect guess decrements score', async () => {
   const response = await context.handler(event('POST', '/guesses/resolve'));
   const body = json<ResolveGuessResponse>(response);
 
-  assert.equal(body.status, 'RESOLVED');
+  assert.equal(body.feedback.type, 'RESOLVED');
   assert.equal(body.score, -1);
 });
 
@@ -392,8 +412,8 @@ test('repeated resolve cannot score the same guess twice', async () => {
   );
   await context.handler(
     event('POST', '/guesses', {
-      direction: 'up',
-      priceSnapshotId: state.priceSnapshot.priceSnapshotId,
+      direction: 'UP',
+      priceSnapshotId: state.latestPrice.priceSnapshotId,
     }),
   );
   context.advance(60_000);
@@ -408,7 +428,7 @@ test('repeated resolve cannot score the same guess twice', async () => {
 
   assert.equal(first.score, 1);
   assert.equal(secondResponse.statusCode, 409);
-  assert.equal(second.code, 'NO_ACTIVE_GUESS');
+  assert.equal(second.error.code, 'NO_ACTIVE_GUESS');
 });
 
 test('CoinGecko failure preserves player state and returns 503 PRICE_PROVIDER_UNAVAILABLE', async () => {
@@ -418,8 +438,8 @@ test('CoinGecko failure preserves player state and returns 503 PRICE_PROVIDER_UN
   );
   await context.handler(
     event('POST', '/guesses', {
-      direction: 'down',
-      priceSnapshotId: state.priceSnapshot.priceSnapshotId,
+      direction: 'DOWN',
+      priceSnapshotId: state.latestPrice.priceSnapshotId,
     }),
   );
 
@@ -434,7 +454,8 @@ test('CoinGecko failure preserves player state and returns 503 PRICE_PROVIDER_UN
           userId: 'user-1',
           score: 7,
           activeGuess: {
-            direction: 'down',
+            id: 'guess-1',
+            direction: 'DOWN',
             startPriceUsd: 100,
             createdAt: new Date(baseTimeMs).toISOString(),
             eligibleAt: new Date(baseTimeMs + 60_000).toISOString(),
@@ -453,5 +474,5 @@ test('CoinGecko failure preserves player state and returns 503 PRICE_PROVIDER_UN
   const body = json<ApiErrorResponse>(response);
 
   assert.equal(response.statusCode, 503);
-  assert.equal(body.code, 'PRICE_PROVIDER_UNAVAILABLE');
+  assert.equal(body.error.code, 'PRICE_PROVIDER_UNAVAILABLE');
 });

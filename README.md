@@ -27,8 +27,15 @@ pnpm --dir client dev
 Start the local API (requires the [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html) and Docker):
 
 ```bash
+pnpm dynamodb:setup
 pnpm --dir server start
 ```
+
+If the table already exists, the create-table command returns a
+`ResourceInUseException`; continue with `pnpm --dir server start`.
+
+To reset the local table, run `pnpm dynamodb:delete-table` and then
+`pnpm dynamodb:create-table`.
 
 The local API exposes:
 
@@ -39,7 +46,7 @@ The local API exposes:
 
 Game API routes require an `x-user-id` header. The client uses `VITE_API_BASE_URL` and defaults to `http://127.0.0.1:3000`. Local CORS allows Vite origins `http://localhost:5173` and `http://127.0.0.1:5173`.
 
-Backend configuration is read from `SNAPSHOT_SIGNING_SECRET`, `COINGECKO_PRICE_URL`, `SNAPSHOT_VALIDITY_MS`, `PROVIDER_CACHE_TTL_MS`, `GUESS_ELIGIBILITY_MS`, and `CORS_ALLOWED_ORIGINS`. Local SAM defaults are defined in `server/template.yaml`.
+Backend configuration is read from `SNAPSHOT_SIGNING_SECRET`, `COINGECKO_PRICE_URL`, `SNAPSHOT_VALIDITY_MS`, `PROVIDER_CACHE_TTL_MS`, `GUESS_ELIGIBILITY_MS`, `CORS_ALLOWED_ORIGINS`, `PLAYER_TABLE_NAME`, and `DYNAMODB_ENDPOINT`. Local SAM defaults are defined in `server/template.yaml`; the local start script points the Lambda container at DynamoDB Local on `http://host.docker.internal:8000`.
 
 ## Documentation
 

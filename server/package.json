@@ -8,9 +8,11 @@
     "typecheck": "tsc --noEmit",
     "test": "tsc --build ../packages/api-contract tsconfig.json && node --test 'dist/**/*.test.js'",
     "build": "sam build",
-    "start": "sam build && sam local start-api"
+    "start": "sam build && sam local start-api --parameter-overrides DynamoDbEndpoint=http://host.docker.internal:8000"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/lib-dynamodb": "^3.0.0",
     "@epilot/api-contract": "workspace:*"
   },
   "devDependencies": {

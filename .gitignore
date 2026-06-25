@@ -7,3 +7,6 @@ dist-test/
 
 # Server
 .aws-sam/
+
+# Local DynamoDB data
+docker/dynamodb/
