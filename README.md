@@ -125,8 +125,9 @@ pnpm --dir server build
 sam deploy --guided --template-file server/.aws-sam/build/template.yaml
 ```
 
-During `sam deploy --guided`, choose an AWS region and stack name. The stack
-creates:
+During `sam deploy --guided`, choose an AWS region and stack name. This assumes
+`aws configure` has already been run for the AWS account and region you want to
+use. The stack creates:
 
 - an API Gateway HTTP API for the game endpoints;
 - a Lambda function running the TypeScript backend build;
@@ -136,13 +137,22 @@ The DynamoDB table name is controlled by the `PlayerTableName` SAM parameter.
 The Lambda receives that value through `PLAYER_TABLE_NAME`, so production state
 is stored in DynamoDB rather than the in-memory fallback.
 
-For production, do not keep the local defaults unchanged. Configure these values
-for the deployed Lambda:
+The deployment template also exposes these production-facing parameters:
 
-- `SNAPSHOT_SIGNING_SECRET`: a strong random secret used to sign price snapshot
-  tokens. Treat it as a production secret and rotate it if it is exposed.
-- `CORS_ALLOWED_ORIGINS`: the deployed frontend origin, for example
+- `FrontendOrigin`: the deployed frontend origin, for example
   `https://btc-game.example.com`.
+- `SnapshotSigningSecret`: a strong random secret used to sign price snapshot
+  tokens. The parameter is marked with `NoEcho: true` so CloudFormation does not
+  display it in plain text in normal stack views.
+- `PlayerTableName`: the DynamoDB table name for player state.
+
+`FrontendOrigin` is used for both `GameApi.CorsConfiguration.AllowOrigins` and
+the Lambda `CORS_ALLOWED_ORIGINS` environment variable. `SnapshotSigningSecret`
+is used for the Lambda `SNAPSHOT_SIGNING_SECRET` environment variable.
+
+For production, also review these Lambda environment values in
+`server/template.yaml`:
+
 - `COINGECKO_PRICE_URL`: the BTC/USD price endpoint. The default uses
   CoinGecko's simple price API.
 - `COINGECKO_REQUEST_TIMEOUT_MS`: request timeout for the price provider.
@@ -153,17 +163,41 @@ for the deployed Lambda:
 - `GUESS_ELIGIBILITY_MS`: the minimum guess duration. The exercise value is
   `60000`.
 
-Also update the `GameApi.CorsConfiguration.AllowOrigins` values in
-`server/template.yaml` before a production deploy. The checked-in defaults are
-for local development only:
+For a temporary deployment, the first backend deploy can use the local default
+frontend origin:
 
-```yaml
-AllowOrigins:
-  - https://your-frontend-domain.example
+```text
+FrontendOrigin=http://localhost:5173
 ```
 
-After deployment, SAM prints the API Gateway URL. Use that URL as the frontend
-API base URL.
+After the frontend is deployed, redeploy the backend with `FrontendOrigin` set
+to the real frontend URL so browser CORS checks allow API calls from the hosted
+site. SAM prints the API Gateway URL through the `GameApiUrl` stack output. Use
+that URL as the frontend API base URL.
+
+#### Production note: secret management
+
+For a production deployment, sensitive values such as `SNAPSHOT_SIGNING_SECRET`
+should not be passed directly as plain CloudFormation parameters or stored
+directly in Lambda environment variables.
+
+A more production-suitable approach would be to store secrets in **AWS Secrets
+Manager** and allow the Lambda function to retrieve them at runtime using an IAM
+role with least-privilege access. Secrets Manager is designed for application
+secrets such as API keys, database credentials, signing secrets, and third-party
+tokens. It supports encryption using AWS KMS, IAM-based access control, secret
+versioning, and automatic rotation where applicable.
+
+For simpler configuration values, **AWS Systems Manager Parameter Store** can
+also be used. Non-sensitive values can be stored as regular parameters, while
+sensitive values can be stored as `SecureString` parameters encrypted with AWS
+KMS.
+
+In this project, using a `NoEcho` CloudFormation parameter is acceptable for a
+lightweight coding-challenge deployment because it avoids hardcoding the secret
+in the template or source code. However, for production, Secrets Manager or SSM
+Parameter Store would provide better separation between infrastructure
+configuration and secret lifecycle management.
 
 ### Frontend
 

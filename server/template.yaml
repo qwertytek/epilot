@@ -6,6 +6,14 @@ Parameters:
     Type: String
     Default: epilot-btc-guess-players
     Description: DynamoDB table name for player state.
+  FrontendOrigin:
+    Type: String
+    Default: http://localhost:5173
+    Description: Browser origin allowed to call the game API.
+  SnapshotSigningSecret:
+    Type: String
+    NoEcho: true
+    Description: Secret used to sign price snapshot tokens.
   DynamoDbEndpoint:
     Type: String
     Default: ''
@@ -36,8 +44,7 @@ Resources:
           - POST
           - OPTIONS
         AllowOrigins:
-          - http://localhost:5173
-          - http://127.0.0.1:5173
+          - !Ref FrontendOrigin
 
   ApiFunction:
     Type: AWS::Serverless::Function
@@ -45,7 +52,7 @@ Resources:
       CodeUri: .
       Handler: handler.handler
       Runtime: nodejs22.x
-      MemorySize: 256
+      MemorySize: 128
       Timeout: 10
       Environment:
         Variables:
@@ -53,9 +60,9 @@ Resources:
           COINGECKO_REQUEST_TIMEOUT_MS: '5000'
           GUESS_ELIGIBILITY_MS: '60000'
           PROVIDER_CACHE_TTL_MS: '10000'
-          SNAPSHOT_SIGNING_SECRET: local-dev-snapshot-signing-secret
+          SNAPSHOT_SIGNING_SECRET: !Ref SnapshotSigningSecret
           SNAPSHOT_VALIDITY_MS: '30000'
-          CORS_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+          CORS_ALLOWED_ORIGINS: !Ref FrontendOrigin
           PLAYER_TABLE_NAME: !Ref PlayerTableName
           DYNAMODB_ENDPOINT: !Ref DynamoDbEndpoint
       Policies:
@@ -94,3 +101,17 @@ Resources:
             Method: post
     Metadata:
       BuildMethod: makefile
+
+  ApiFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${ApiFunction}
+      RetentionInDays: 7
+
+Outputs:
+  GameApiUrl:
+    Description: API Gateway HTTP API URL.
+    Value: !Sub https://${GameApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}
+  PlayerTableName:
+    Description: DynamoDB table name used for player state.
+    Value: !Ref PlayerTable
