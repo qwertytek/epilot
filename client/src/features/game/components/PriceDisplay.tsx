@@ -9,8 +9,14 @@ export const PriceDisplay = ({ price, updatedAt }: PriceDisplayProps) => (
       Latest BTC / USD
     </p>
     <p className="mt-4 text-4xl font-bold tracking-tight text-brand-navy sm:text-5xl">
-      {price}
+      {price ?? (
+        <span className="price-loading-dots" aria-label="Loading Bitcoin price">
+          ...
+        </span>
+      )}
     </p>
-    <p className="mt-3 text-sm text-brand-muted">Snapshot {updatedAt}</p>
+    <p className="mt-3 text-sm text-brand-muted">
+      {updatedAt ? `Snapshot ${updatedAt}` : 'Snapshot pending'}
+    </p>
   </section>
 );

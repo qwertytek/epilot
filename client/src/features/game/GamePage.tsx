@@ -68,15 +68,9 @@ const GamePage = () => {
     <div className="app-shell flex items-center text-brand-navy">
       <main className="mx-auto w-full max-w-5xl px-5 py-8 sm:px-8 sm:py-12">
         <div className="rounded-3xl border border-brand-border bg-white p-6 shadow-sm sm:p-10">
-          <GameHeader score={gameState?.score ?? 0} />
+          <GameHeader score={gameState?.score ?? null} />
 
           <div className="mt-6 grid gap-3" aria-live="polite">
-            {gameStateQuery.isLoading ? (
-              <GameFeedback message="Loading live game state..." />
-            ) : null}
-            {priceStateQuery.isLoading ? (
-              <GameFeedback message="Loading live price..." />
-            ) : null}
             {error ? (
               <GameFeedback
                 message={getErrorMessage(
@@ -106,10 +100,10 @@ const GamePage = () => {
           <div className="game-content-grid mt-9 border-t border-brand-border pt-8">
             <PriceDisplay
               price={
-                latestPrice ? formatCurrencyUsd(latestPrice.priceUsd) : '...'
+                latestPrice ? formatCurrencyUsd(latestPrice.priceUsd) : null
               }
               updatedAt={
-                latestPrice ? formatDateTime(latestPrice.observedAt) : ''
+                latestPrice ? formatDateTime(latestPrice.observedAt) : null
               }
             />
 

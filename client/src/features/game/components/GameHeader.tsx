@@ -18,7 +18,11 @@ export const GameHeader = ({ score }: GameHeaderProps) => (
       <p className="text-xs font-semibold uppercase tracking-wide text-brand-primary">
         Score
       </p>
-      <p className="mt-1 text-2xl font-bold text-brand-navy">{score}</p>
+      {score === null ? (
+        <span className="score-skeleton mt-2" aria-label="Loading score" />
+      ) : (
+        <p className="mt-1 text-2xl font-bold text-brand-navy">{score}</p>
+      )}
     </div>
   </header>
 );

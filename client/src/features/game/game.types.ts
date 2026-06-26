@@ -3,12 +3,12 @@ import type { GuessDirection } from '@epilot/api-contract';
 export type { GuessDirection };
 
 export type GameHeaderProps = {
-  score: number;
+  score: number | null;
 };
 
 export type PriceDisplayProps = {
-  price: string;
-  updatedAt: string;
+  price: string | null;
+  updatedAt: string | null;
 };
 
 export type GuessControlsProps = {
