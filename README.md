@@ -20,7 +20,7 @@ player persistence live on the server.
 
 ## Requirements
 
-- Node.js and pnpm 11
+- Node.js v24.18.0 and pnpm 11
 - Docker, for DynamoDB Local
 - AWS SAM CLI, for the local Lambda/API Gateway runtime
 

@@ -51,7 +51,7 @@ Resources:
     Properties:
       CodeUri: .
       Handler: handler.handler
-      Runtime: nodejs22.x
+      Runtime: nodejs24.x
       MemorySize: 128
       Timeout: 10
       Environment:
