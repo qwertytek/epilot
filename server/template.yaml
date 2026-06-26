@@ -74,6 +74,12 @@ Resources:
             ApiId: !Ref GameApi
             Path: /state
             Method: get
+        Price:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref GameApi
+            Path: /price
+            Method: get
         CreateGuess:
           Type: HttpApi
           Properties:

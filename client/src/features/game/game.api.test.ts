@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { getAnonymousUserId } from '../../api/identity.js';
-import { createGuess, getGameState } from './game.api.js';
+import { createGuess, getGameState, getPriceState } from './game.api.js';
 
 type FetchCall = {
   url: string;
@@ -38,14 +38,9 @@ const installBrowserMocks = () => {
       return {
         ok: true,
         json: async () => ({
-          userId: 'generated-user-id',
           score: 0,
-          latestPrice: {
-            priceSnapshotId: 'snapshot-token',
-            priceUsd: 100,
-            observedAt: '2026-06-25T12:00:00.000Z',
-            expiresAt: '2026-06-25T12:00:30.000Z',
-          },
+          activeGuess: null,
+          feedback: { type: 'NONE' },
         }),
       };
     },
@@ -68,6 +63,18 @@ test('getGameState sends x-user-id to the state endpoint', async () => {
   await getGameState();
 
   assert.equal(fetchCalls[0]?.url, 'http://127.0.0.1:3000/state');
+  assert.deepEqual(fetchCalls[0]?.init.headers, {
+    'content-type': 'application/json',
+    'x-user-id': 'generated-user-id',
+  });
+});
+
+test('getPriceState sends x-user-id to the price endpoint', async () => {
+  const { fetchCalls } = installBrowserMocks();
+
+  await getPriceState();
+
+  assert.equal(fetchCalls[0]?.url, 'http://127.0.0.1:3000/price');
   assert.deepEqual(fetchCalls[0]?.init.headers, {
     'content-type': 'application/json',
     'x-user-id': 'generated-user-id',

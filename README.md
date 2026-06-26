@@ -42,6 +42,7 @@ To reset the local table, run `pnpm dynamodb:delete-table` and then
 The local API exposes:
 
 - `GET http://127.0.0.1:3000/health`
+- `GET http://127.0.0.1:3000/price`
 - `GET http://127.0.0.1:3000/state`
 - `POST http://127.0.0.1:3000/guesses`
 - `POST http://127.0.0.1:3000/guesses/resolve`

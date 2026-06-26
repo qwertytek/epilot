@@ -1,5 +1,6 @@
 import { handleCreateGuess, handleResolveGuess } from './guesses.route.js';
 import { handleHealth } from './health.route.js';
+import { handlePrice } from './price.route.js';
 import type { RouteContext } from './route-context.js';
 import { handleState } from './state.route.js';
 import type { ApiGatewayEvent, Response } from '../types.js';
@@ -17,6 +18,7 @@ type Route = {
 
 const routes: Route[] = [
   { method: 'GET', path: '/health', handle: handleHealth },
+  { method: 'GET', path: '/price', handle: handlePrice },
   { method: 'GET', path: '/state', handle: handleState },
   { method: 'POST', path: '/guesses', handle: handleCreateGuess },
   { method: 'POST', path: '/guesses/resolve', handle: handleResolveGuess },

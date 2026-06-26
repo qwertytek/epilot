@@ -19,7 +19,15 @@ export type Response = {
   body: string;
 };
 
-export type PriceProvider = () => Promise<number>;
+export type PriceProviderOptions = {
+  allowStale?: boolean;
+};
+
+export type PriceProvider = ((
+  options?: PriceProviderOptions,
+) => Promise<number>) & {
+  getLastFetchedAtMs?: () => number | undefined;
+};
 
 export type HandlerOptions = {
   now?: () => Date;

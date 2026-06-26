@@ -52,9 +52,12 @@ export type ActiveGuess = {
 
 export type GameStateResponse = {
   score: number;
-  latestPrice: PriceSnapshot;
   activeGuess: ActiveGuess | null;
   feedback: Feedback;
+};
+
+export type PriceStateResponse = {
+  latestPrice: PriceSnapshot;
 };
 
 export type CreateGuessRequest = {
@@ -64,7 +67,7 @@ export type CreateGuessRequest = {
 
 export type CreateGuessResponse = GameStateResponse;
 
-export type ResolveGuessResponse = GameStateResponse;
+export type ResolveGuessResponse = GameStateResponse & PriceStateResponse;
 
 export type ApiErrorResponse = {
   error: {

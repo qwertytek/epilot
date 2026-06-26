@@ -40,24 +40,56 @@ export const createCachedPriceProvider = (
         fetchedAtMs: number;
       }
     | undefined;
+  let refreshPromise: Promise<number> | undefined;
+  let lastReturnedFetchedAtMs: number | undefined;
 
-  return async () => {
+  const refreshPrice = async () => {
+    if (refreshPromise !== undefined) {
+      return refreshPromise;
+    }
+
+    refreshPromise = priceProvider()
+      .then((priceUsd) => {
+        cachedPrice = { priceUsd, fetchedAtMs: now().getTime() };
+        return priceUsd;
+      })
+      .finally(() => {
+        refreshPromise = undefined;
+      });
+
+    return refreshPromise;
+  };
+
+  const getCachedPrice: PriceProvider = async ({ allowStale = true } = {}) => {
     const nowMs = now().getTime();
 
     if (
       cachedPrice !== undefined &&
       nowMs - cachedPrice.fetchedAtMs < cacheTtlMs
     ) {
+      lastReturnedFetchedAtMs = cachedPrice.fetchedAtMs;
+      return cachedPrice.priceUsd;
+    }
+
+    if (cachedPrice !== undefined && allowStale) {
+      lastReturnedFetchedAtMs = cachedPrice.fetchedAtMs;
+      void refreshPrice().catch((error: unknown) => {
+        console.warn('Background price refresh failed.', error);
+      });
       return cachedPrice.priceUsd;
     }
 
     try {
-      const priceUsd = await priceProvider();
-      cachedPrice = { priceUsd, fetchedAtMs: nowMs };
+      const priceUsd = await refreshPrice();
+      lastReturnedFetchedAtMs = cachedPrice?.fetchedAtMs;
       return priceUsd;
     } catch (error) {
       console.warn('Price provider request failed.', error);
       throw new ApiError(503, 'PRICE_PROVIDER_UNAVAILABLE');
     }
   };
+
+  getCachedPrice.getLastFetchedAtMs = () => lastReturnedFetchedAtMs;
+
+  return getCachedPrice;
 };

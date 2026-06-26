@@ -4,10 +4,16 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import type { GameStateResponse, GuessDirection } from '@epilot/api-contract';
+import type {
+  GameStateResponse,
+  GuessDirection,
+  PriceSnapshot,
+  PriceStateResponse,
+} from '@epilot/api-contract';
 
-import { createGuess, getGameState } from './game.api.js';
+import { createGuess, getGameState, getPriceState } from './game.api.js';
 import { getAnonymousUserId } from '../../api/identity.js';
+import { ApiError } from '../../api/http.js';
 
 const optimisticGuessEligibilityMs = 60_000;
 
@@ -16,7 +22,45 @@ const gameKeys = {
   players: () => [...gameKeys.all, 'players'] as const,
   player: (userId: string) => [...gameKeys.players(), userId] as const,
   state: (userId: string) => [...gameKeys.player(userId), 'state'] as const,
+  price: () => [...gameKeys.all, 'price'] as const,
   guesses: (userId: string) => [...gameKeys.player(userId), 'guesses'] as const,
+};
+
+const isPriceSnapshot = (value: unknown): value is PriceSnapshot => {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const snapshot = value as Record<string, unknown>;
+
+  return (
+    typeof snapshot.priceSnapshotId === 'string' &&
+    typeof snapshot.priceUsd === 'number' &&
+    Number.isFinite(snapshot.priceUsd) &&
+    typeof snapshot.observedAt === 'string' &&
+    typeof snapshot.expiresAt === 'string'
+  );
+};
+
+const getLatestPriceFromExpiredSnapshotError = (
+  error: unknown,
+): PriceSnapshot | null => {
+  if (
+    !(error instanceof ApiError) ||
+    error.error.error.code !== 'PRICE_SNAPSHOT_EXPIRED'
+  ) {
+    return null;
+  }
+
+  const details = error.error.error.details;
+
+  if (typeof details !== 'object' || details === null) {
+    return null;
+  }
+
+  const latestPrice = (details as Record<string, unknown>).latestPrice;
+
+  return isPriceSnapshot(latestPrice) ? latestPrice : null;
 };
 
 const createGameStateQueryOptions = (userId: string) =>
@@ -36,8 +80,16 @@ const createGameStateQueryOptions = (userId: string) =>
     },
   });
 
+const createPriceStateQueryOptions = () =>
+  queryOptions({
+    queryKey: gameKeys.price(),
+    queryFn: getPriceState,
+  });
+
 const useGameStateQuery = (userId = getAnonymousUserId()) =>
   useQuery(createGameStateQueryOptions(userId));
+
+const usePriceStateQuery = () => useQuery(createPriceStateQueryOptions());
 
 const useCreateGuessMutation = (userId: string) => {
   const queryClient = useQueryClient();
@@ -57,8 +109,14 @@ const useCreateGuessMutation = (userId: string) => {
       const previousState = queryClient.getQueryData<GameStateResponse>(
         gameKeys.state(userId),
       );
+      const previousPriceState = queryClient.getQueryData<PriceStateResponse>(
+        gameKeys.price(),
+      );
 
-      if (previousState?.activeGuess === null) {
+      if (
+        previousState?.activeGuess === null &&
+        previousPriceState !== undefined
+      ) {
         const createdAt = new Date();
 
         queryClient.setQueryData<GameStateResponse>(gameKeys.state(userId), {
@@ -66,7 +124,7 @@ const useCreateGuessMutation = (userId: string) => {
           activeGuess: {
             id: 'optimistic-guess',
             direction,
-            startPriceUsd: previousState.latestPrice.priceUsd,
+            startPriceUsd: previousPriceState.latestPrice.priceUsd,
             createdAt: createdAt.toISOString(),
             eligibleAt: new Date(
               createdAt.getTime() + optimisticGuessEligibilityMs,
@@ -78,11 +136,24 @@ const useCreateGuessMutation = (userId: string) => {
         });
       }
 
-      return { previousState };
+      return { previousState, previousPriceState };
     },
-    onError: (_error, _variables, context) => {
+    onError: (error, _variables, context) => {
       if (context?.previousState) {
+        const latestPrice = getLatestPriceFromExpiredSnapshotError(error);
+
         queryClient.setQueryData(gameKeys.state(userId), context.previousState);
+
+        if (latestPrice !== null) {
+          queryClient.setQueryData<PriceStateResponse>(gameKeys.price(), {
+            latestPrice,
+          });
+        } else if (context.previousPriceState) {
+          queryClient.setQueryData(
+            gameKeys.price(),
+            context.previousPriceState,
+          );
+        }
       }
     },
     onSuccess: (state) => {
@@ -96,7 +167,9 @@ const useCreateGuessMutation = (userId: string) => {
 
 export {
   createGameStateQueryOptions,
+  createPriceStateQueryOptions,
   gameKeys,
   useCreateGuessMutation,
   useGameStateQuery,
+  usePriceStateQuery,
 };

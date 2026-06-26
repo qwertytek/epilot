@@ -3,7 +3,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { PriceSnapshot } from '@epilot/api-contract';
 
 import { ApiError } from '../errors.js';
-import type { PriceProvider } from '../types.js';
+import type { PriceProvider, PriceProviderOptions } from '../types.js';
 
 type SnapshotPayload = {
   priceUsd: number;
@@ -93,9 +93,11 @@ export const createPriceSnapshotFactory =
     snapshotValidityMs: number,
     snapshotSigningSecret: string,
   ) =>
-  async (): Promise<PriceSnapshot> => {
-    const priceUsd = await getPrice();
-    const observedAt = now();
+  async (options?: PriceProviderOptions): Promise<PriceSnapshot> => {
+    const priceUsd = await getPrice(options);
+    const lastFetchedAtMs = getPrice.getLastFetchedAtMs?.();
+    const observedAt =
+      lastFetchedAtMs === undefined ? now() : new Date(lastFetchedAtMs);
     const expiresAt = new Date(observedAt.getTime() + snapshotValidityMs);
     const payload: SnapshotPayload = {
       priceUsd,

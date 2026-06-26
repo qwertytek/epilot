@@ -13,7 +13,11 @@ import { GameHeader } from './components/GameHeader';
 import { GuessControls } from './components/GuessControls';
 import { PendingGuess } from './components/PendingGuess';
 import { PriceDisplay } from './components/PriceDisplay';
-import { useCreateGuessMutation, useGameStateQuery } from './game.queries';
+import {
+  useCreateGuessMutation,
+  useGameStateQuery,
+  usePriceStateQuery,
+} from './game.queries';
 import { getFeedbackMessage } from './game.feedback';
 
 import './game.css';
@@ -21,9 +25,11 @@ import './game.css';
 const GamePage = () => {
   const userId = getAnonymousUserId();
   const gameStateQuery = useGameStateQuery(userId);
+  const priceStateQuery = usePriceStateQuery();
   const createGuessMutation = useCreateGuessMutation(userId);
 
   const gameState = gameStateQuery.data ?? null;
+  const latestPrice = priceStateQuery.data?.latestPrice ?? null;
 
   const feedback = useMemo(
     () => (gameState ? getFeedbackMessage(gameState.feedback) : null),
@@ -32,20 +38,29 @@ const GamePage = () => {
 
   const activeGuess = gameState?.activeGuess ?? null;
   const isSubmitting = createGuessMutation.isPending;
-  const isBusy = gameStateQuery.isLoading || isSubmitting;
+  const isBusy =
+    gameStateQuery.isLoading || priceStateQuery.isLoading || isSubmitting;
   const { resolveWaitSeconds } = useResolveCountdown(activeGuess);
   const isCheckingResults = activeGuess !== null && resolveWaitSeconds === 0;
-  const error = gameStateQuery.error ?? createGuessMutation.error;
-  const pendingDirection = createGuessMutation.variables?.direction;
+  const error =
+    gameStateQuery.error ?? priceStateQuery.error ?? createGuessMutation.error;
+  const pendingDirection = isSubmitting
+    ? createGuessMutation.variables?.direction
+    : undefined;
 
   const handleGuess = async (direction: GuessDirection) => {
-    if (gameState === null || activeGuess !== null || isBusy) {
+    if (
+      gameState === null ||
+      latestPrice === null ||
+      activeGuess !== null ||
+      isBusy
+    ) {
       return;
     }
 
     createGuessMutation.mutate({
       direction,
-      priceSnapshotId: gameState.latestPrice.priceSnapshotId,
+      priceSnapshotId: latestPrice.priceSnapshotId,
     });
   };
 
@@ -59,6 +74,9 @@ const GamePage = () => {
             {gameStateQuery.isLoading ? (
               <GameFeedback message="Loading live game state..." />
             ) : null}
+            {priceStateQuery.isLoading ? (
+              <GameFeedback message="Loading live price..." />
+            ) : null}
             {error ? (
               <GameFeedback
                 message={getErrorMessage(
@@ -69,15 +87,18 @@ const GamePage = () => {
               />
             ) : null}
             {gameState && gameStateQuery.isFetching ? (
+              <GameFeedback message="Refreshing game state in the background..." />
+            ) : null}
+            {latestPrice && priceStateQuery.isFetching ? (
               <GameFeedback message="Refreshing live price in the background..." />
             ) : null}
             {isCheckingResults ? (
               <GameFeedback message="Checking for results..." />
             ) : null}
-            {gameState &&
-            gameStateQuery.isStale &&
-            !gameStateQuery.isFetching ? (
-              <GameFeedback message="Showing cached game state while the latest price is stale." />
+            {latestPrice &&
+            priceStateQuery.isStale &&
+            !priceStateQuery.isFetching ? (
+              <GameFeedback message="Showing cached price while the latest price refreshes." />
             ) : null}
             {feedback ? <GameFeedback {...feedback} /> : null}
           </div>
@@ -85,14 +106,10 @@ const GamePage = () => {
           <div className="game-content-grid mt-9 border-t border-brand-border pt-8">
             <PriceDisplay
               price={
-                gameState
-                  ? formatCurrencyUsd(gameState.latestPrice.priceUsd)
-                  : '...'
+                latestPrice ? formatCurrencyUsd(latestPrice.priceUsd) : '...'
               }
               updatedAt={
-                gameState
-                  ? formatDateTime(gameState.latestPrice.observedAt)
-                  : ''
+                latestPrice ? formatDateTime(latestPrice.observedAt) : ''
               }
             />
 
@@ -110,7 +127,7 @@ const GamePage = () => {
               </div>
             ) : (
               <GuessControls
-                disabled={gameState === null || isBusy}
+                disabled={gameState === null || latestPrice === null || isBusy}
                 label="Which way will it move?"
                 onGuess={handleGuess}
                 pendingDirection={pendingDirection}

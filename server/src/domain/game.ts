@@ -3,11 +3,13 @@ import type {
   CreateGuessResponse,
   GameStateResponse,
   PriceSnapshot,
+  PriceStateResponse,
   ResolveGuessResponse,
 } from '@epilot/api-contract';
 
 import { ApiError } from '../errors.js';
 import type { PlayerStore } from './player-store.js';
+import type { PriceProviderOptions } from '../types.js';
 
 export type GameService = ReturnType<typeof createGameService>;
 
@@ -20,7 +22,9 @@ export const createGameService = ({
 }: {
   players: PlayerStore;
   now: () => Date;
-  createPriceSnapshot: () => Promise<PriceSnapshot>;
+  createPriceSnapshot: (
+    options?: PriceProviderOptions,
+  ) => Promise<PriceSnapshot>;
   parsePriceSnapshot: (
     priceSnapshotId: string,
   ) => Omit<PriceSnapshot, 'priceSnapshotId'>;
@@ -33,7 +37,7 @@ export const createGameService = ({
       Awaited<ReturnType<PlayerStore['getOrCreate']>>['activeGuess']
     >,
   ): Promise<ResolveGuessResponse> => {
-    const latestPrice = await createPriceSnapshot();
+    const latestPrice = await createPriceSnapshot({ allowStale: false });
     const observedPriceUsd = latestPrice.priceUsd;
 
     if (observedPriceUsd === activeGuess.startPriceUsd) {
@@ -85,25 +89,52 @@ export const createGameService = ({
       activeGuess !== undefined &&
       Date.parse(activeGuess.eligibleAt) <= now().getTime()
     ) {
-      return resolveReadyGuess(userId, player, activeGuess);
-    }
+      const resolvedState = await resolveReadyGuess(
+        userId,
+        player,
+        activeGuess,
+      );
 
-    const latestPrice = await createPriceSnapshot();
+      return {
+        score: resolvedState.score,
+        activeGuess: resolvedState.activeGuess,
+        feedback: resolvedState.feedback,
+      };
+    }
 
     return {
       ...players.toPublicState(player),
-      latestPrice,
       feedback: {
         type: 'NONE',
       },
     };
   };
 
+  const getPriceState = async (): Promise<PriceStateResponse> => ({
+    latestPrice: await createPriceSnapshot({ allowStale: true }),
+  });
+
   const createGuess = async (
     userId: string,
     request: CreateGuessRequest,
   ): Promise<CreateGuessResponse> => {
-    const snapshot = parsePriceSnapshot(request.priceSnapshotId);
+    let snapshot: Omit<PriceSnapshot, 'priceSnapshotId'>;
+
+    try {
+      snapshot = parsePriceSnapshot(request.priceSnapshotId);
+    } catch (error) {
+      if (
+        error instanceof ApiError &&
+        error.code === 'PRICE_SNAPSHOT_EXPIRED'
+      ) {
+        throw new ApiError(410, 'PRICE_SNAPSHOT_EXPIRED', {
+          latestPrice: await createPriceSnapshot({ allowStale: false }),
+        });
+      }
+
+      throw error;
+    }
+
     const createdAt = now();
     const createdAtIso = createdAt.toISOString();
     const player = await players
@@ -130,12 +161,6 @@ export const createGameService = ({
 
     return {
       ...state,
-      latestPrice: {
-        priceSnapshotId: request.priceSnapshotId,
-        priceUsd: snapshot.priceUsd,
-        observedAt: snapshot.observedAt,
-        expiresAt: snapshot.expiresAt,
-      },
       feedback: {
         type: 'GUESS_CREATED',
       },
@@ -155,7 +180,7 @@ export const createGameService = ({
     if (Date.parse(activeGuess.eligibleAt) > now().getTime()) {
       return {
         ...players.toPublicState(player),
-        latestPrice: await createPriceSnapshot(),
+        latestPrice: await createPriceSnapshot({ allowStale: true }),
         feedback: {
           type: 'NOT_READY',
           retryAt: activeGuess.eligibleAt,
@@ -166,5 +191,5 @@ export const createGameService = ({
     return resolveReadyGuess(userId, player, activeGuess);
   };
 
-  return { getState, createGuess, resolveGuess };
+  return { getPriceState, getState, createGuess, resolveGuess };
 };

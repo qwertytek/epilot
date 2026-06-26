@@ -3,12 +3,15 @@ import type {
   CreateGuessResponse,
   GameStateResponse,
   GuessDirection,
+  PriceStateResponse,
   ResolveGuessResponse,
 } from '@epilot/api-contract';
 
 import { requestApi } from '../../api/http.js';
 
 const getGameState = (): Promise<GameStateResponse> => requestApi('/state');
+
+const getPriceState = (): Promise<PriceStateResponse> => requestApi('/price');
 
 const createGuess = (
   direction: GuessDirection,
@@ -30,4 +33,4 @@ const resolveGuess = (): Promise<ResolveGuessResponse> =>
     method: 'POST',
   });
 
-export { createGuess, getGameState, resolveGuess };
+export { createGuess, getGameState, getPriceState, resolveGuess };
