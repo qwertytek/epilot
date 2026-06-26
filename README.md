@@ -1,62 +1,105 @@
 # epilot
 
-A pnpm workspace for a Bitcoin price-direction game.
+Bitcoin price-direction game built as a TypeScript pnpm workspace.
 
-## Current implementation
+Players get the latest BTC/USD price, predict whether the next eligible price
+check will be higher or lower, then receive a score update after the guess
+window expires. The browser keeps an anonymous user ID in `localStorage` and
+sends it to the API through the `x-user-id` header.
 
-- `client`: a Vite + React 19 interface for the BTC/USD prediction game, wired to the game API with TanStack Query.
-- `server`: minimal AWS SAM Lambda structure, exposed locally through API Gateway proxy integration.
-- `packages/api-contract`: shared TypeScript request/response types for the game API.
+## Project Structure
 
-The client loads the current game state from the API, stores an anonymous browser user ID in `localStorage`, and sends it on game requests through the `x-user-id` header. Players can choose whether BTC/USD will move up or down, see an optimistic pending-guess state, and wait while the API automatically checks eligible guesses after 60 seconds. Feedback messages cover loading, background refreshes, stale cached data, API errors, created guesses, result checks, unchanged prices, and resolved score changes.
+- `client`: Vite, React 19, Tailwind CSS 4, and TanStack Query frontend.
+- `server`: AWS SAM Lambda API using API Gateway HTTP API locally.
+- `packages/api-contract`: shared TypeScript API request and response types.
 
-## Getting started
+The frontend is intentionally thin: it reads game state, fetches price
+snapshots, submits guesses, shows pending guess countdowns, and reacts to API
+feedback. Game rules, snapshot signing, price fetching, score changes, and
+player persistence live on the server.
 
-Install workspace dependencies:
+## Requirements
+
+- Node.js and pnpm 11
+- Docker, for DynamoDB Local
+- AWS SAM CLI, for the local Lambda/API Gateway runtime
+
+## Getting Started
+
+Install dependencies:
 
 ```bash
 pnpm install
 ```
 
-Start the client development server:
-
-```bash
-pnpm --dir client dev
-```
-
-The client reads `VITE_API_BASE_URL` and defaults to `http://127.0.0.1:3000`.
-
-Start the local API (requires the [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html) and Docker):
+Start DynamoDB Local and create the local player table once:
 
 ```bash
 pnpm dynamodb:setup
+```
+
+If the table already exists, DynamoDB returns `ResourceInUseException`; that is
+safe to ignore.
+
+Start the full local app:
+
+```bash
+pnpm start
+```
+
+This starts DynamoDB Local, the SAM API on `http://127.0.0.1:3000`, and the
+Vite client on `http://localhost:5173`.
+
+The client reads `VITE_API_BASE_URL` when set and otherwise calls
+`http://127.0.0.1:3000`.
+
+## Local API
+
+The API exposes:
+
+- `GET /health`
+- `GET /price`
+- `GET /state`
+- `POST /guesses`
+- `POST /guesses/resolve`
+
+Game routes require an `x-user-id` header. Local CORS allows
+`http://localhost:5173` and `http://127.0.0.1:5173`.
+
+Manual service commands are also available:
+
+```bash
+pnpm dynamodb:start
+pnpm --dir client dev
 pnpm --dir server start
 ```
 
-If the table already exists, the create-table command returns a
-`ResourceInUseException`; continue with `pnpm --dir server start`.
+To reset local player state:
 
-To reset the local table, run `pnpm dynamodb:delete-table` and then
-`pnpm dynamodb:create-table`.
+```bash
+pnpm dynamodb:delete-table
+pnpm dynamodb:create-table
+```
 
-The local API exposes:
+## Backend Configuration
 
-- `GET http://127.0.0.1:3000/health`
-- `GET http://127.0.0.1:3000/price`
-- `GET http://127.0.0.1:3000/state`
-- `POST http://127.0.0.1:3000/guesses`
-- `POST http://127.0.0.1:3000/guesses/resolve`
+Local SAM defaults are defined in `server/template.yaml`. The main environment
+variables are:
 
-Game API routes require an `x-user-id` header. Local CORS allows Vite origins `http://localhost:5173` and `http://127.0.0.1:5173`.
+- `COINGECKO_PRICE_URL`
+- `COINGECKO_REQUEST_TIMEOUT_MS`
+- `SNAPSHOT_SIGNING_SECRET`
+- `SNAPSHOT_VALIDITY_MS`
+- `PROVIDER_CACHE_TTL_MS`
+- `GUESS_ELIGIBILITY_MS`
+- `CORS_ALLOWED_ORIGINS`
+- `PLAYER_TABLE_NAME`
+- `DYNAMODB_ENDPOINT`
 
-Backend configuration is read from `SNAPSHOT_SIGNING_SECRET`, `COINGECKO_PRICE_URL`, `SNAPSHOT_VALIDITY_MS`, `PROVIDER_CACHE_TTL_MS`, `GUESS_ELIGIBILITY_MS`, `CORS_ALLOWED_ORIGINS`, `PLAYER_TABLE_NAME`, and `DYNAMODB_ENDPOINT`. Local SAM defaults are defined in `server/template.yaml`; the local start script points the Lambda container at DynamoDB Local on `http://host.docker.internal:8000`.
+The local server start script points the Lambda container at DynamoDB Local via
+`http://host.docker.internal:8000`.
 
-## Documentation
-
-See the [client README](./client/README.md) for client-specific setup and structure.
-See the [server README](./server/README.md) for server-specific setup and structure.
-
-## Quality checks
+## Quality Checks
 
 ```bash
 pnpm lint
@@ -65,3 +108,8 @@ pnpm --dir client test
 pnpm --dir server test
 pnpm format:check
 ```
+
+## More Documentation
+
+- [Client README](./client/README.md)
+- [Server README](./server/README.md)
