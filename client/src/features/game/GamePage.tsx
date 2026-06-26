@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import type { GuessDirection } from '@epilot/api-contract';
 
-import { Button } from '../../shared/components/Button';
 import { useResolveCountdown } from '../../hooks/useResolveCountdown';
 import {
   formatCurrencyUsd,
@@ -14,11 +13,7 @@ import { GameHeader } from './components/GameHeader';
 import { GuessControls } from './components/GuessControls';
 import { PendingGuess } from './components/PendingGuess';
 import { PriceDisplay } from './components/PriceDisplay';
-import {
-  useCreateGuessMutation,
-  useGameStateQuery,
-  useResolveGuessMutation,
-} from './game.queries';
+import { useCreateGuessMutation, useGameStateQuery } from './game.queries';
 import { getFeedbackMessage } from './game.feedback';
 
 import './game.css';
@@ -27,7 +22,6 @@ const GamePage = () => {
   const userId = getAnonymousUserId();
   const gameStateQuery = useGameStateQuery(userId);
   const createGuessMutation = useCreateGuessMutation(userId);
-  const resolveGuessMutation = useResolveGuessMutation(userId);
 
   const gameState = gameStateQuery.data ?? null;
 
@@ -38,16 +32,10 @@ const GamePage = () => {
 
   const activeGuess = gameState?.activeGuess ?? null;
   const isSubmitting = createGuessMutation.isPending;
-  const isResolving = resolveGuessMutation.isPending;
-  const isBusy = gameStateQuery.isLoading || isSubmitting || isResolving;
-  const { canResolve, resolveWaitSeconds } = useResolveCountdown(
-    activeGuess,
-    isBusy,
-  );
-  const error =
-    gameStateQuery.error ??
-    createGuessMutation.error ??
-    resolveGuessMutation.error;
+  const isBusy = gameStateQuery.isLoading || isSubmitting;
+  const { resolveWaitSeconds } = useResolveCountdown(activeGuess);
+  const isCheckingResults = activeGuess !== null && resolveWaitSeconds === 0;
+  const error = gameStateQuery.error ?? createGuessMutation.error;
   const pendingDirection = createGuessMutation.variables?.direction;
 
   const handleGuess = async (direction: GuessDirection) => {
@@ -59,14 +47,6 @@ const GamePage = () => {
       direction,
       priceSnapshotId: gameState.latestPrice.priceSnapshotId,
     });
-  };
-
-  const handleResolve = async () => {
-    if (activeGuess === null || isBusy) {
-      return;
-    }
-
-    resolveGuessMutation.mutate();
   };
 
   return (
@@ -90,6 +70,9 @@ const GamePage = () => {
             ) : null}
             {gameState && gameStateQuery.isFetching ? (
               <GameFeedback message="Refreshing live price in the background..." />
+            ) : null}
+            {isCheckingResults ? (
+              <GameFeedback message="Checking for results..." />
             ) : null}
             {gameState &&
             gameStateQuery.isStale &&
@@ -119,13 +102,11 @@ const GamePage = () => {
                   direction={activeGuess.direction}
                   eligibleAt={formatDateTime(activeGuess.eligibleAt)}
                 />
-                <Button disabled={!canResolve} onClick={handleResolve}>
-                  {isResolving
-                    ? 'Resolving...'
-                    : resolveWaitSeconds > 0
-                      ? `Resolve in ${resolveWaitSeconds}s`
-                      : 'Resolve guess'}
-                </Button>
+                <p className="rounded-2xl border border-brand-border bg-white px-5 py-3 text-sm font-semibold text-brand-primary">
+                  {resolveWaitSeconds > 0
+                    ? `Checking results in ${resolveWaitSeconds}s`
+                    : 'Checking for results...'}
+                </p>
               </div>
             ) : (
               <GuessControls

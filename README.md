@@ -8,7 +8,7 @@ A pnpm workspace for a Bitcoin price-direction game.
 - `server`: minimal AWS SAM Lambda structure, exposed locally through API Gateway proxy integration.
 - `packages/api-contract`: shared TypeScript request/response types for the game API.
 
-The client loads the current game state from the API, stores an anonymous browser user ID in `localStorage`, and sends it on game requests through the `x-user-id` header. Players can choose whether BTC/USD will move up or down, see an optimistic pending-guess state, wait for the resolve countdown, and resolve the guess once it becomes eligible. Feedback messages cover loading, background refreshes, stale cached data, API errors, created guesses, not-ready responses, unchanged prices, and resolved score changes.
+The client loads the current game state from the API, stores an anonymous browser user ID in `localStorage`, and sends it on game requests through the `x-user-id` header. Players can choose whether BTC/USD will move up or down, see an optimistic pending-guess state, and wait while the API automatically checks eligible guesses after 60 seconds. Feedback messages cover loading, background refreshes, stale cached data, API errors, created guesses, result checks, unchanged prices, and resolved score changes.
 
 ## Getting started
 

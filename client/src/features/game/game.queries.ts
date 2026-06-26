@@ -6,7 +6,7 @@ import {
 } from '@tanstack/react-query';
 import type { GameStateResponse, GuessDirection } from '@epilot/api-contract';
 
-import { createGuess, getGameState, resolveGuess } from './game.api.js';
+import { createGuess, getGameState } from './game.api.js';
 import { getAnonymousUserId } from '../../api/identity.js';
 
 const optimisticGuessEligibilityMs = 60_000;
@@ -23,6 +23,17 @@ const createGameStateQueryOptions = (userId: string) =>
   queryOptions({
     queryKey: gameKeys.state(userId),
     queryFn: getGameState,
+    refetchInterval: (query) => {
+      const activeGuess = query.state.data?.activeGuess;
+
+      if (!activeGuess) {
+        return false;
+      }
+
+      const waitMs = Date.parse(activeGuess.eligibleAt) - Date.now();
+
+      return waitMs > 0 ? Math.max(waitMs, 1_000) : 3_000;
+    },
   });
 
 const useGameStateQuery = (userId = getAnonymousUserId()) =>
@@ -83,25 +94,9 @@ const useCreateGuessMutation = (userId: string) => {
   });
 };
 
-const useResolveGuessMutation = (userId: string) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationKey: [...gameKeys.guesses(userId), 'resolve'],
-    mutationFn: resolveGuess,
-    onSuccess: (state) => {
-      queryClient.setQueryData(gameKeys.state(userId), state);
-    },
-    onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: gameKeys.state(userId) });
-    },
-  });
-};
-
 export {
   createGameStateQueryOptions,
   gameKeys,
   useCreateGuessMutation,
   useGameStateQuery,
-  useResolveGuessMutation,
 };

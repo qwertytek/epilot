@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ActiveGuess } from '@epilot/api-contract';
 
-const useResolveCountdown = (
-  activeGuess: ActiveGuess | null,
-  isBusy: boolean,
-) => {
+const useResolveCountdown = (activeGuess: ActiveGuess | null) => {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -28,7 +25,6 @@ const useResolveCountdown = (
     : 0;
 
   return {
-    canResolve: activeGuess !== null && resolveWaitMs === 0 && !isBusy,
     resolveWaitSeconds: Math.ceil(resolveWaitMs / 1_000),
   };
 };

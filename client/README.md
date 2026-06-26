@@ -35,9 +35,9 @@ The client renders a responsive game view connected to the backend API. It curre
 - `x-user-id` request headers for game API calls;
 - up/down prediction controls backed by `POST /guesses`;
 - optimistic pending-guess UI while a guess is submitted;
-- a countdown before resolving the active guess;
-- resolve handling through `POST /guesses/resolve`;
-- feedback for loading, background refresh, stale cached state, API errors, not-ready guesses, unchanged prices, and resolved score changes.
+- a countdown before the active guess is checked automatically;
+- automatic result checks through `GET /state`, with `POST /guesses/resolve` still available in the API;
+- feedback for loading, background refresh, stale cached state, API errors, result checks, unchanged prices, and resolved score changes.
 
 The client API layer uses the shared `@epilot/api-contract` package for request and response types. TanStack Query owns game-state fetching, mutation cache updates, retry behavior, stale-state handling, and background refetches.
 

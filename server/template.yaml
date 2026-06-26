@@ -50,7 +50,7 @@ Resources:
       Environment:
         Variables:
           COINGECKO_PRICE_URL: https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd
-          COINGECKO_REQUEST_TIMEOUT_MS: '2000'
+          COINGECKO_REQUEST_TIMEOUT_MS: '5000'
           GUESS_ELIGIBILITY_MS: '60000'
           PROVIDER_CACHE_TTL_MS: '10000'
           SNAPSHOT_SIGNING_SECRET: local-dev-snapshot-signing-secret

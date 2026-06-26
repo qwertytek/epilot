@@ -7,8 +7,7 @@ const getFeedbackMessage = (feedback: Feedback): GameFeedbackProps | null => {
   switch (feedback.type) {
     case 'GUESS_CREATED':
       return {
-        message:
-          'Guess submitted. Resolve it once the eligibility time passes.',
+        message: 'Guess submitted. Results will be checked after 60 seconds.',
       };
     case 'NOT_READY':
       return {
@@ -24,10 +23,8 @@ const getFeedbackMessage = (feedback: Feedback): GameFeedbackProps | null => {
       return {
         message:
           feedback.outcome === 'CORRECT'
-            ? `Correct prediction. Score ${feedback.scoreDelta > 0 ? '+' : ''}${
-                feedback.scoreDelta
-              }.`
-            : `Incorrect prediction. Score ${feedback.scoreDelta}.`,
+            ? `You won your last bet. Score +${feedback.scoreDelta}.`
+            : `You lost your last bet. Score ${feedback.scoreDelta}.`,
         tone: feedback.outcome === 'CORRECT' ? 'success' : 'error',
       };
     case 'NONE':

@@ -83,7 +83,6 @@ export const createAppContext = (options: HandlerOptions = {}) => {
   const game = createGameService({
     players,
     now,
-    getPrice,
     createPriceSnapshot,
     parsePriceSnapshot: (priceSnapshotId) =>
       parseSnapshotToken(priceSnapshotId, snapshotSigningSecret, now()),

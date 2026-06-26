@@ -55,7 +55,8 @@ export const createCachedPriceProvider = (
       const priceUsd = await priceProvider();
       cachedPrice = { priceUsd, fetchedAtMs: nowMs };
       return priceUsd;
-    } catch {
+    } catch (error) {
+      console.warn('Price provider request failed.', error);
       throw new ApiError(503, 'PRICE_PROVIDER_UNAVAILABLE');
     }
   };

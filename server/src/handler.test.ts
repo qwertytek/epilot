@@ -312,6 +312,74 @@ test('guess cannot resolve before 60 seconds', async () => {
   assert.equal(body.activeGuess?.direction, 'UP');
 });
 
+test('GET /state keeps guess pending before 60 seconds', async () => {
+  const context = createTestHandler([100, 110]);
+  const state = json<GameStateResponse>(
+    await context.handler(event('GET', '/state')),
+  );
+  await context.handler(
+    event('POST', '/guesses', {
+      direction: 'UP',
+      priceSnapshotId: state.latestPrice.priceSnapshotId,
+    }),
+  );
+  context.advance(59_999);
+
+  const response = await context.handler(event('GET', '/state'));
+  const body = json<GameStateResponse>(response);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.score, 0);
+  assert.equal(body.activeGuess?.direction, 'UP');
+  assert.equal(body.feedback.type, 'NONE');
+});
+
+test('GET /state resolves an eligible winning guess and updates score', async () => {
+  const context = createTestHandler([100, 101]);
+  const state = json<GameStateResponse>(
+    await context.handler(event('GET', '/state')),
+  );
+  await context.handler(
+    event('POST', '/guesses', {
+      direction: 'UP',
+      priceSnapshotId: state.latestPrice.priceSnapshotId,
+    }),
+  );
+  context.advance(60_000);
+
+  const response = await context.handler(event('GET', '/state'));
+  const body = json<GameStateResponse>(response);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.score, 1);
+  assert.equal(body.activeGuess, null);
+  assert.equal(body.feedback.type, 'RESOLVED');
+  assert.equal(body.feedback.outcome, 'CORRECT');
+});
+
+test('GET /state resolves an eligible losing guess and updates score', async () => {
+  const context = createTestHandler([100, 99]);
+  const state = json<GameStateResponse>(
+    await context.handler(event('GET', '/state')),
+  );
+  await context.handler(
+    event('POST', '/guesses', {
+      direction: 'UP',
+      priceSnapshotId: state.latestPrice.priceSnapshotId,
+    }),
+  );
+  context.advance(60_000);
+
+  const response = await context.handler(event('GET', '/state'));
+  const body = json<GameStateResponse>(response);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.score, -1);
+  assert.equal(body.activeGuess, null);
+  assert.equal(body.feedback.type, 'RESOLVED');
+  assert.equal(body.feedback.outcome, 'INCORRECT');
+});
+
 test('resolve without an active guess returns 409 NO_ACTIVE_GUESS', async () => {
   const { handler } = createTestHandler([100]);
   const response = await handler(event('POST', '/guesses/resolve'));
