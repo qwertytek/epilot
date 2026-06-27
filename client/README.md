@@ -77,3 +77,33 @@ src/
 ├── hooks/     Shared React hooks
 └── shared/    Reusable components, styles, utilities, and design tokens
 ```
+
+Feature folders keep stateful, feature-owning components at the top level of
+the feature boundary. Presentational components with no local state stay inside
+that component's `components/` folder:
+
+```text
+src/features/myFeature/
+├── MyFeature.tsx
+├── myFeature.api.ts
+├── myFeature.queries.ts
+└── components/
+    ├── MyFeatureHeader.tsx
+    └── MyFeatureControls.tsx
+```
+
+Nested smart components follow the same rule:
+
+```text
+src/features/myFeature/myComponent/
+├── MyComponent.tsx
+└── components/
+    └── MyComponentDetail.tsx
+```
+
+Avoid moving UI into `shared/components` just because it has no state. If a
+component is tied to a specific feature or screen, keep it local to that feature
+or smart component. This keeps state and presentation clearly separated while
+making promotion simple: when a local presentational component becomes useful
+outside its original UI, it can move from `myComponent/components/` to
+`shared/components/` with a clear reason and a small import update.
