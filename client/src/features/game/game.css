@@ -279,6 +279,11 @@
   --price-result-glow: rgb(194 65 12 / 24%);
 }
 
+.price-value-new.is-neutral {
+  --price-result-color: #6b7280;
+  --price-result-glow: rgb(107 114 128 / 24%);
+}
+
 .price-stale-overlay {
   position: absolute;
   inset: 0;

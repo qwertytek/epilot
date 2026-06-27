@@ -67,8 +67,13 @@ const isPriceExpired = (price: PriceSnapshot | null, bufferMs = 0): boolean =>
 const getPriceAnimationTone = (
   previousPrice: PriceSnapshot,
   nextPrice: PriceSnapshot,
-): 'success' | 'error' =>
-  nextPrice.priceUsd > previousPrice.priceUsd ? 'success' : 'error';
+): 'success' | 'error' | 'neutral' => {
+  if (nextPrice.priceUsd === previousPrice.priceUsd) {
+    return 'neutral';
+  }
+
+  return nextPrice.priceUsd > previousPrice.priceUsd ? 'success' : 'error';
+};
 
 const useIsPriceExpired = (price: PriceSnapshot | null) => {
   const [now, setNow] = useState(() => Date.now());
@@ -168,7 +173,7 @@ const GamePage = () => {
   const [livePriceAnimation, setLivePriceAnimation] = useState<{
     key: string;
     previousPrice: string;
-    tone: 'success' | 'error';
+    tone: 'success' | 'error' | 'neutral';
   } | null>(null);
   const priceAnimation =
     resolvedAnimationKey !== undefined
@@ -204,7 +209,6 @@ const GamePage = () => {
     if (
       previousPrice === null ||
       previousPrice.priceSnapshotId === currentPrice.priceSnapshotId ||
-      previousPrice.priceUsd === currentPrice.priceUsd ||
       resolvedAnimationKey !== undefined
     ) {
       return;

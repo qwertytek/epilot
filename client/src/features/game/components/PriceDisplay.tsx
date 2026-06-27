@@ -91,8 +91,7 @@ export const PriceDisplay = ({
     animationKey !== undefined &&
     animationPreviousPrice !== undefined &&
     animationTone !== undefined &&
-    price !== null &&
-    animationPreviousPrice !== price;
+    price !== null;
   const priceStatus = useMemo(
     () => getPriceStatus(observedAt, refreshesAt, now),
     [now, observedAt, refreshesAt],

@@ -10,7 +10,7 @@ export type PriceDisplayProps = {
   animationBlink?: 'single' | 'repeat';
   animationKey?: string;
   animationPreviousPrice?: string;
-  animationTone?: 'success' | 'error';
+  animationTone?: 'success' | 'error' | 'neutral';
   isRefreshing?: boolean;
   isStale?: boolean;
   onRefresh: () => void;
