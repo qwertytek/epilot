@@ -15,8 +15,9 @@ export type PriceDisplayProps = {
   isStale?: boolean;
   onRefresh: () => void;
   lastBet: string | null;
+  observedAt: string | null;
   price: string | null;
-  updatedAt: string | null;
+  refreshesAt: string | null;
 };
 
 export type GuessControlsProps = {

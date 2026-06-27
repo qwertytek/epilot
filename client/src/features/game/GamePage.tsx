@@ -124,6 +124,7 @@ const GamePage = () => {
     ? {
         priceUsd: activeGuess.startPriceUsd,
         observedAt: activeGuess.createdAt,
+        expiresAt: null,
       }
     : currentPrice;
   const isGameStateKnown = gameStateQuery.data !== undefined;
@@ -296,16 +297,13 @@ const GamePage = () => {
                   ? formatCurrencyUsd(gameState.lastBet.priceUsd)
                   : null
               }
+              observedAt={displayedPrice ? displayedPrice.observedAt : null}
               price={
                 displayedPrice
                   ? formatCurrencyUsd(displayedPrice.priceUsd)
                   : null
               }
-              updatedAt={
-                displayedPrice
-                  ? formatDateTime(displayedPrice.observedAt)
-                  : null
-              }
+              refreshesAt={displayedPrice ? displayedPrice.expiresAt : null}
             />
 
             {!isGameStateKnown ? (

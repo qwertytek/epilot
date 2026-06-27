@@ -36,6 +36,9 @@ The backend still applies `PROVIDER_CACHE_TTL_MS` around the upstream CoinGecko
 provider. That means repeated `GET /price` calls can return a signed snapshot
 from the backend cache while a provider refresh is happening, limiting
 third-party API traffic independently from the client-side expiry refresh cap.
+By default, snapshots expire after ten seconds while the provider cache is kept
+for fifteen seconds, so the UI can feel active without asking CoinGecko on every
+visible refresh.
 
 ## Requirements
 

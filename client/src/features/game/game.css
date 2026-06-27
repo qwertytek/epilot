@@ -209,6 +209,24 @@
   --price-loading-dot-color: var(--color-brand-muted);
 }
 
+.price-refresh-progress {
+  position: relative;
+  height: 0.375rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(7 26 44 / 10%);
+}
+
+.price-refresh-progress::after {
+  position: absolute;
+  inset: 0;
+  width: var(--price-refresh-progress, 0%);
+  border-radius: inherit;
+  background: var(--color-brand-secondary);
+  content: '';
+  transition: width 260ms ease;
+}
+
 .game-price-value {
   min-height: 1.1em;
 }
