@@ -131,7 +131,7 @@ const useCreateGuessMutation = (userId: string) => {
             ).toISOString(),
           },
           feedback: {
-            type: 'GUESS_CREATED',
+            type: 'NONE',
           },
         });
       }

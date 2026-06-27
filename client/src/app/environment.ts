@@ -5,7 +5,7 @@ type FrontendEnv = {
   VITE_APP_ENV?: string;
 };
 
-const env = (import.meta as ImportMeta & { env?: FrontendEnv }).env;
+const env = (import.meta as ImportMeta & { env?: FrontendEnv }).env ?? {};
 
 const frontendMode = env?.MODE ?? 'development';
 const appEnvironment = env?.VITE_APP_ENV ?? 'development';
