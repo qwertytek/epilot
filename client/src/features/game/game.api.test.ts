@@ -207,6 +207,15 @@ test('price provider outage uses generic user-facing copy', () => {
   );
 });
 
+test('network fetch failures use generic user-facing copy', () => {
+  const error = new TypeError('Failed to fetch');
+
+  assert.equal(
+    getErrorMessage(error),
+    'Something went wrong. Please try again.',
+  );
+});
+
 test('price provider outage appears in behind-the-scenes feedback', () => {
   const error = createApiError(
     'PRICE_PROVIDER_UNAVAILABLE',
@@ -224,5 +233,24 @@ test('price provider outage appears in behind-the-scenes feedback', () => {
       isPriceStale: false,
     }),
     ['Price provider unavailable; showing a generic error to the user.'],
+  );
+});
+
+test('network fetch failures appear in behind-the-scenes feedback', () => {
+  const error = new TypeError('Failed to fetch');
+
+  assert.deepEqual(
+    getBehindTheScenesFeedback({
+      error,
+      hasGameState: false,
+      hasLatestPrice: false,
+      isCheckingResults: false,
+      isGameStateFetching: false,
+      isPriceFetching: false,
+      isPriceStale: false,
+    }),
+    [
+      'Unexpected client error; showing a generic error to the user. Failed to fetch',
+    ],
   );
 });

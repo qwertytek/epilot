@@ -18,6 +18,18 @@ const isPriceProviderUnavailableError = (error: unknown) =>
   error instanceof ApiError &&
   error.error.error.code === 'PRICE_PROVIDER_UNAVAILABLE';
 
+const getUnexpectedErrorFeedback = (error: unknown) => {
+  if (!error || error instanceof ApiError) {
+    return null;
+  }
+
+  if (error instanceof Error) {
+    return `Unexpected client error; showing a generic error to the user. ${error.message}`;
+  }
+
+  return 'Unexpected client error; showing a generic error to the user.';
+};
+
 const getBehindTheScenesFeedback = ({
   error,
   hasGameState,
@@ -34,6 +46,7 @@ const getBehindTheScenesFeedback = ({
     isPriceProviderUnavailableError(error)
       ? 'Price provider unavailable; showing a generic error to the user.'
       : null,
+    getUnexpectedErrorFeedback(error),
     hasGameState && isGameStateFetching
       ? 'Refreshing game state in the background...'
       : null,
