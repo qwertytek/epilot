@@ -137,6 +137,15 @@ The DynamoDB table name is controlled by the `PlayerTableName` SAM parameter.
 The Lambda receives that value through `PLAYER_TABLE_NAME`, so production state
 is stored in DynamoDB rather than the in-memory fallback.
 
+The table uses DynamoDB provisioned billing with `ReadCapacityUnits=1` and
+`WriteCapacityUnits=1`. This is intentional for a low-traffic pet-project
+deployment: provisioned capacity keeps the table inside the DynamoDB free-tier
+capacity allowance as long as usage stays within the account's free-tier limits.
+On-demand billing is easier for unpredictable production traffic, but it is
+metered per request and can produce charges if the app is hit repeatedly or a
+test loop makes many requests. This template optimizes for predictable free-tier
+usage rather than burst capacity.
+
 The deployment template also exposes these production-facing parameters:
 
 - `FrontendOrigin`: the deployed frontend origin, for example
