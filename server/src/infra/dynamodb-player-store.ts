@@ -196,7 +196,11 @@ export const createDynamoDbPlayerStore = ({
       );
 
       return (
-        response.Attributes ?? { ...existingPlayer, activeGuess: guess, lastBet }
+        response.Attributes ?? {
+          ...existingPlayer,
+          activeGuess: guess,
+          lastBet,
+        }
       );
     } catch (error) {
       if (isConditionalFailure(error)) {

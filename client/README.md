@@ -67,6 +67,11 @@ The client renders a responsive game view connected to the backend API. It curre
 
 The client API layer uses the shared `@epilot/api-contract` package for request and response types. TanStack Query owns game-state fetching, mutation cache updates, retry behavior, stale-state handling, and background refetches.
 
+Price snapshots are refreshed automatically when they expire, capped at five
+expiry refreshes for the initial session and three after the user refreshes the
+price or reloads into the reduced-refresh session. The full strategy is
+documented in the root README.
+
 ## Structure
 
 ```text

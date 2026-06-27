@@ -25,6 +25,33 @@ import { getFeedbackMessage } from './game.feedback';
 import './game.css';
 
 const priceSubmitExpiryBufferMs = 1_000;
+const initialPriceExpiryRefreshLimit = 5;
+const refreshedPriceExpiryRefreshLimit = 3;
+const reducedPriceExpiryRefreshLimitStorageKey =
+  'btc-game.reduced-price-expiry-refresh-limit';
+
+const getInitialPriceExpiryRefreshLimit = () => {
+  try {
+    return window.sessionStorage.getItem(
+      reducedPriceExpiryRefreshLimitStorageKey,
+    ) === 'true'
+      ? refreshedPriceExpiryRefreshLimit
+      : initialPriceExpiryRefreshLimit;
+  } catch {
+    return initialPriceExpiryRefreshLimit;
+  }
+};
+
+const storeReducedPriceExpiryRefreshLimit = () => {
+  try {
+    window.sessionStorage.setItem(
+      reducedPriceExpiryRefreshLimitStorageKey,
+      'true',
+    );
+  } catch {
+    // Storage can be unavailable in private contexts; the in-memory limit still applies.
+  }
+};
 
 const getPriceExpiresInMs = (price: PriceSnapshot | null) => {
   if (price === null) {
@@ -68,11 +95,14 @@ const GamePage = () => {
   const gameStateQuery = useGameStateQuery(userId);
   const activeGuess = gameStateQuery.data?.activeGuess ?? null;
   const lastActiveGuessRef = useRef(activeGuess);
+  const lastAutoRefreshedPriceIdRef = useRef<string | null>(null);
   const resolvedPrice = gameStateQuery.data?.latestPrice ?? null;
   const priceStateQuery = usePriceStateQuery(
     gameStateQuery.data?.activeGuess === null && resolvedPrice === null,
   );
   const createGuessMutation = useCreateGuessMutation(userId);
+  const [remainingPriceExpiryRefreshes, setRemainingPriceExpiryRefreshes] =
+    useState(getInitialPriceExpiryRefreshLimit);
 
   const gameState = gameStateQuery.data ?? null;
   const latestPrice = priceStateQuery.data?.latestPrice ?? null;
@@ -134,6 +164,37 @@ const GamePage = () => {
     }
   }, [activeGuess]);
 
+  useEffect(() => {
+    if (
+      !isPriceStale ||
+      currentPrice === null ||
+      activeGuess !== null ||
+      priceStateQuery.isFetching ||
+      remainingPriceExpiryRefreshes <= 0 ||
+      lastAutoRefreshedPriceIdRef.current === currentPrice.priceSnapshotId
+    ) {
+      return;
+    }
+
+    lastAutoRefreshedPriceIdRef.current = currentPrice.priceSnapshotId;
+    setRemainingPriceExpiryRefreshes((remainingRefreshes) => {
+      const nextRemainingRefreshes = Math.max(remainingRefreshes - 1, 0);
+
+      if (nextRemainingRefreshes === 0) {
+        storeReducedPriceExpiryRefreshLimit();
+      }
+
+      return nextRemainingRefreshes;
+    });
+    void priceStateQuery.refetch();
+  }, [
+    activeGuess,
+    currentPrice,
+    isPriceStale,
+    priceStateQuery,
+    remainingPriceExpiryRefreshes,
+  ]);
+
   const handleGuess = async (direction: GuessDirection) => {
     if (
       gameState === null ||
@@ -169,6 +230,12 @@ const GamePage = () => {
               isRefreshing={activeGuess === null && priceStateQuery.isFetching}
               isStale={isPriceStale}
               onRefresh={() => {
+                lastAutoRefreshedPriceIdRef.current =
+                  currentPrice?.priceSnapshotId ?? null;
+                setRemainingPriceExpiryRefreshes(
+                  refreshedPriceExpiryRefreshLimit,
+                );
+                storeReducedPriceExpiryRefreshLimit();
                 void priceStateQuery.refetch();
               }}
               lastBet={

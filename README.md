@@ -18,6 +18,25 @@ snapshots, submits guesses, shows pending guess countdowns, and reacts to API
 feedback. Game rules, snapshot signing, price fetching, score changes, and
 player persistence live on the server.
 
+## Price Fetching Strategy
+
+The client fetches the latest BTC/USD snapshot from `GET /price` only while the
+player has no active guess. Each signed snapshot includes an `expiresAt` value;
+TanStack Query keeps the snapshot fresh until that timestamp, then the game view
+marks it stale.
+
+When a displayed price expires, the client automatically calls `GET /price` for
+a replacement snapshot. This automatic expiry refresh is capped at five calls
+for the initial page session. Once that allowance is exhausted, the user must
+refresh the price manually or reload the page. After a refresh path is reached,
+the client stores the reduced allowance in `sessionStorage`, so the refreshed
+session receives three automatic expiry refreshes.
+
+The backend still applies `PROVIDER_CACHE_TTL_MS` around the upstream CoinGecko
+provider. That means repeated `GET /price` calls can return a signed snapshot
+from the backend cache while a provider refresh is happening, limiting
+third-party API traffic independently from the client-side expiry refresh cap.
+
 ## Requirements
 
 - Node.js v24.18.0 and pnpm 11
