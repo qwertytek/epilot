@@ -6,9 +6,7 @@ import type { GameFeedbackProps } from './game.types.js';
 const getFeedbackMessage = (feedback: Feedback): GameFeedbackProps | null => {
   switch (feedback.type) {
     case 'GUESS_CREATED':
-      return {
-        message: 'Guess submitted. Results will be checked after 60 seconds.',
-      };
+      return null;
     case 'NOT_READY':
       return {
         message: `Not ready yet. Try again after ${formatDateTime(
