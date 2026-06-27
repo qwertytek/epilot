@@ -14,12 +14,15 @@ export const GameHeader = ({ score }: GameHeaderProps) => (
       </p>
     </div>
 
-    <div className="rounded-xl border border-brand-border bg-brand-blueSoft px-4 py-3">
+    <div className="rounded-xl border border-brand-border bg-brand-blueSoft px-4 py-3 text-center">
       <p className="text-xs font-semibold uppercase tracking-wide text-brand-primary">
         Score
       </p>
       {score === null ? (
-        <span className="score-skeleton mt-2" aria-label="Loading score" />
+        <span
+          className="score-skeleton mx-auto mt-2"
+          aria-label="Loading score"
+        />
       ) : (
         <p className="mt-1 text-2xl font-bold text-brand-navy">{score}</p>
       )}
