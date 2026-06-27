@@ -3,7 +3,14 @@ import test from 'node:test';
 
 import { getAnonymousUserId } from '../../api/identity.js';
 import { createGuess, getGameState, getPriceState } from './game.api.js';
-import { createPriceStateQueryOptions } from './game.queries.js';
+import {
+  createGameStateQueryOptions,
+  createPriceStateQueryOptions,
+} from './game.queries.js';
+import type {
+  GameStateResponse,
+  PriceStateResponse,
+} from '@epilot/api-contract';
 
 type FetchCall = {
   url: string;
@@ -98,4 +105,67 @@ test('createGuess submits direction and priceSnapshotId without a raw price', as
 test('price query can be disabled while a guess is active', () => {
   assert.equal(createPriceStateQueryOptions(false).enabled, false);
   assert.equal(createPriceStateQueryOptions(true).enabled, true);
+});
+
+test('resolved comparison price remains available while its snapshot is fresh', () => {
+  const latestPrice = {
+    priceSnapshotId: 'resolved-snapshot',
+    priceUsd: 101,
+    observedAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 30_000).toISOString(),
+  };
+  const previousState: GameStateResponse = {
+    score: 1,
+    activeGuess: null,
+    feedback: {
+      type: 'RESOLVED',
+      outcome: 'CORRECT',
+      scoreDelta: 1,
+    },
+    latestPrice,
+  };
+  const nextState: GameStateResponse = {
+    score: 1,
+    activeGuess: null,
+    feedback: { type: 'NONE' },
+  };
+  const structuralSharing =
+    createGameStateQueryOptions('generated-user-id').structuralSharing;
+
+  if (typeof structuralSharing !== 'function') {
+    assert.fail('Expected game state query structuralSharing to be a function');
+  }
+
+  const mergedState = structuralSharing(previousState, nextState);
+
+  assert.deepEqual(mergedState, {
+    ...nextState,
+    latestPrice,
+  });
+});
+
+test('price query stays fresh until the signed snapshot expires', () => {
+  const latestPrice = {
+    priceSnapshotId: 'resolved-snapshot',
+    priceUsd: 101,
+    observedAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 30_000).toISOString(),
+  };
+  const staleTime = createPriceStateQueryOptions(true).staleTime;
+
+  if (typeof staleTime !== 'function') {
+    assert.fail('Expected price query staleTime to be a function');
+  }
+
+  const freshMs = (
+    staleTime as (query: { state: { data: PriceStateResponse } }) => number
+  )({
+    state: {
+      data: {
+        latestPrice,
+      } satisfies PriceStateResponse,
+    },
+  });
+
+  assert.ok(typeof freshMs === 'number' && freshMs > 25_000);
 });

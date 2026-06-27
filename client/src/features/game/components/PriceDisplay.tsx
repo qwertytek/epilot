@@ -1,6 +1,9 @@
 import type { PriceDisplayProps } from '../game.types';
 
 export const PriceDisplay = ({
+  animationKey,
+  animationPreviousPrice,
+  animationTone,
   isRefreshing = false,
   isStale = false,
   onRefresh,
@@ -10,6 +13,12 @@ export const PriceDisplay = ({
   const isLoadingStalePrice = isStale && isRefreshing;
   const displayedPrice = isLoadingStalePrice ? null : price;
   const displayedUpdatedAt = isLoadingStalePrice ? null : updatedAt;
+  const shouldAnimatePrice =
+    animationKey !== undefined &&
+    animationPreviousPrice !== undefined &&
+    animationTone !== undefined &&
+    displayedPrice !== null &&
+    animationPreviousPrice !== displayedPrice;
 
   return (
     <section
@@ -25,14 +34,32 @@ export const PriceDisplay = ({
       >
         Latest BTC / USD
       </p>
-      <p className="mt-4 text-4xl font-bold tracking-tight text-brand-navy sm:text-5xl">
-        {displayedPrice ?? (
+      <p className="game-price-value mt-4 text-4xl font-bold tracking-tight text-brand-navy sm:text-5xl">
+        {shouldAnimatePrice ? (
           <span
-            className="price-loading-dots"
-            aria-label="Loading Bitcoin price"
+            aria-label={displayedPrice}
+            className="price-transition"
+            key={animationKey}
           >
-            ...
+            <span aria-hidden="true" className="price-value-old">
+              {animationPreviousPrice}
+            </span>
+            <span
+              aria-hidden="true"
+              className={`price-value-new is-${animationTone}`}
+            >
+              {displayedPrice}
+            </span>
           </span>
+        ) : (
+          (displayedPrice ?? (
+            <span
+              className="price-loading-dots"
+              aria-label="Loading Bitcoin price"
+            >
+              ...
+            </span>
+          ))
         )}
       </p>
       <p className="mt-3 text-sm text-brand-muted">

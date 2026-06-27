@@ -95,11 +95,7 @@ export const createGameService = ({
         activeGuess,
       );
 
-      return {
-        score: resolvedState.score,
-        activeGuess: resolvedState.activeGuess,
-        feedback: resolvedState.feedback,
-      };
+      return resolvedState;
     }
 
     return {

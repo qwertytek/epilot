@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import type { GuessDirection } from '@epilot/api-contract';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { GuessDirection, PriceSnapshot } from '@epilot/api-contract';
 
 import { useResolveCountdown } from '../../hooks/useResolveCountdown';
 import { useGameWarnings } from '../../hooks/useGameWarnings';
@@ -24,26 +24,75 @@ import { getFeedbackMessage } from './game.feedback';
 
 import './game.css';
 
+const priceSubmitExpiryBufferMs = 1_000;
+
+const getPriceExpiresInMs = (price: PriceSnapshot | null) => {
+  if (price === null) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  return Date.parse(price.expiresAt) - Date.now();
+};
+
+const isPriceExpired = (price: PriceSnapshot | null, bufferMs = 0): boolean =>
+  getPriceExpiresInMs(price) <= bufferMs;
+
+const useIsPriceExpired = (price: PriceSnapshot | null) => {
+  const [now, setNow] = useState(() => Date.now());
+  const expiresAtMs = price ? Date.parse(price.expiresAt) : null;
+
+  useEffect(() => {
+    if (expiresAtMs === null) {
+      return;
+    }
+
+    const delayMs = Math.max(expiresAtMs - Date.now(), 0);
+    const timeoutId = window.setTimeout(() => {
+      setNow(Date.now());
+    }, delayMs);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [expiresAtMs]);
+
+  if (expiresAtMs === null) {
+    return false;
+  }
+
+  return expiresAtMs <= now;
+};
+
 const GamePage = () => {
   const userId = getAnonymousUserId();
   const gameStateQuery = useGameStateQuery(userId);
   const activeGuess = gameStateQuery.data?.activeGuess ?? null;
+  const lastActiveGuessRef = useRef(activeGuess);
+  const resolvedPrice = gameStateQuery.data?.latestPrice ?? null;
   const priceStateQuery = usePriceStateQuery(
-    gameStateQuery.data?.activeGuess === null,
+    gameStateQuery.data?.activeGuess === null && resolvedPrice === null,
   );
   const createGuessMutation = useCreateGuessMutation(userId);
 
   const gameState = gameStateQuery.data ?? null;
   const latestPrice = priceStateQuery.data?.latestPrice ?? null;
+  const currentPrice =
+    resolvedPrice && (!isPriceExpired(resolvedPrice) || latestPrice === null)
+      ? resolvedPrice
+      : latestPrice;
+  const isCurrentPriceExpired = useIsPriceExpired(currentPrice);
+  const isCurrentPriceSubmittable =
+    currentPrice !== null &&
+    !isPriceExpired(currentPrice, priceSubmitExpiryBufferMs);
   const displayedPrice = activeGuess
     ? {
         priceUsd: activeGuess.startPriceUsd,
         observedAt: activeGuess.createdAt,
       }
-    : latestPrice;
+    : currentPrice;
   const isGameStateKnown = gameStateQuery.data !== undefined;
   const isPriceStale =
-    activeGuess === null && priceStateQuery.isStale && latestPrice !== null;
+    activeGuess === null && currentPrice !== null && isCurrentPriceExpired;
 
   const feedback = useMemo(
     () => (gameState ? getFeedbackMessage(gameState.feedback) : null),
@@ -64,12 +113,33 @@ const GamePage = () => {
   const pendingDirection = isSubmitting
     ? createGuessMutation.variables?.direction
     : undefined;
+  const resolvedAnimationKey =
+    gameState?.feedback.type === 'RESOLVED'
+      ? resolvedPrice?.priceSnapshotId
+      : undefined;
+  const resolvedPriceAnimationTone =
+    gameState?.feedback.type === 'RESOLVED'
+      ? gameState.feedback.outcome === 'CORRECT'
+        ? 'success'
+        : 'error'
+      : undefined;
+  const resolvedPreviousPrice =
+    resolvedAnimationKey !== undefined && lastActiveGuessRef.current
+      ? formatCurrencyUsd(lastActiveGuessRef.current.startPriceUsd)
+      : undefined;
+
+  useEffect(() => {
+    if (activeGuess) {
+      lastActiveGuessRef.current = activeGuess;
+    }
+  }, [activeGuess]);
 
   const handleGuess = async (direction: GuessDirection) => {
     if (
       gameState === null ||
-      latestPrice === null ||
+      currentPrice === null ||
       activeGuess !== null ||
+      !isCurrentPriceSubmittable ||
       isPriceStale ||
       isBusy
     ) {
@@ -79,7 +149,7 @@ const GamePage = () => {
     dismissPersistentWarnings();
     createGuessMutation.mutate({
       direction,
-      priceSnapshotId: latestPrice.priceSnapshotId,
+      priceSnapshotId: currentPrice.priceSnapshotId,
     });
   };
 
@@ -93,6 +163,9 @@ const GamePage = () => {
 
           <div className="game-content-grid mt-9 border-t border-brand-border pt-8">
             <PriceDisplay
+              animationKey={resolvedAnimationKey}
+              animationPreviousPrice={resolvedPreviousPrice}
+              animationTone={resolvedPriceAnimationTone}
               isRefreshing={activeGuess === null && priceStateQuery.isFetching}
               isStale={isPriceStale}
               onRefresh={() => {
@@ -128,7 +201,8 @@ const GamePage = () => {
               <GuessControls
                 disabled={
                   gameState === null ||
-                  latestPrice === null ||
+                  currentPrice === null ||
+                  !isCurrentPriceSubmittable ||
                   isPriceStale ||
                   isBusy
                 }
@@ -142,7 +216,7 @@ const GamePage = () => {
           <DevWarnings
             error={error}
             hasGameState={gameState !== null}
-            hasLatestPrice={latestPrice !== null}
+            hasLatestPrice={currentPrice !== null}
             isCheckingResults={isCheckingResults}
             isGameStateFetching={gameStateQuery.isFetching}
             isPriceFetching={priceStateQuery.isFetching}

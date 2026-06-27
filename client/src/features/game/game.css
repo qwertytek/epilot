@@ -203,6 +203,42 @@
   animation: price-loading-dots 1.2s steps(1, end) infinite;
 }
 
+.game-price-value {
+  min-height: 1.1em;
+}
+
+.price-transition {
+  display: inline-grid;
+  min-width: 8ch;
+  vertical-align: bottom;
+}
+
+.price-transition > span {
+  grid-area: 1 / 1;
+}
+
+.price-value-old {
+  animation: price-value-old-vanish 1.5s ease forwards;
+}
+
+.price-value-new {
+  opacity: 0;
+  transform: translateY(0.35rem) scale(0.98);
+  animation:
+    price-value-new-appear 340ms ease 820ms forwards,
+    price-value-new-blink 900ms ease 1.18s 3;
+}
+
+.price-value-new.is-success {
+  --price-result-color: #16803c;
+  --price-result-glow: rgb(22 128 60 / 24%);
+}
+
+.price-value-new.is-error {
+  --price-result-color: #c2410c;
+  --price-result-glow: rgb(194 65 12 / 24%);
+}
+
 .price-stale-overlay {
   position: absolute;
   inset: 0;
@@ -256,6 +292,48 @@
 
   100% {
     background-position: 0 0;
+  }
+}
+
+@keyframes price-value-old-vanish {
+  0%,
+  55% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-0.45rem) scale(0.98);
+  }
+}
+
+@keyframes price-value-new-appear {
+  0% {
+    opacity: 0;
+    transform: translateY(0.35rem) scale(0.98);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes price-value-new-blink {
+  0% {
+    color: var(--price-result-color);
+    text-shadow: 0 0 1.5rem var(--price-result-glow);
+  }
+
+  50% {
+    color: var(--color-brand-navy);
+    text-shadow: none;
+  }
+
+  100% {
+    color: var(--color-brand-navy);
+    text-shadow: none;
   }
 }
 

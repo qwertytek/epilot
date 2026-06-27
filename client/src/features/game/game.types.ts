@@ -7,6 +7,9 @@ export type GameHeaderProps = {
 };
 
 export type PriceDisplayProps = {
+  animationKey?: string;
+  animationPreviousPrice?: string;
+  animationTone?: 'success' | 'error';
   isRefreshing?: boolean;
   isStale?: boolean;
   onRefresh: () => void;
