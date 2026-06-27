@@ -56,17 +56,16 @@
 - [x] Generate `crypto.randomUUID()` on first visit.
 - [x] Persist anonymous id in `localStorage`.
 - [x] Send `x-user-id` with all API requests.
-- [ ] Fetch `/state` on page load.
-- [ ] Render server score.
-- [ ] Render server price snapshot and timestamp.
-- [ ] Submit `direction` plus `priceSnapshotId`.
-- [ ] Disable new guess buttons while a guess is active.
-- [ ] Show pending guess and countdown/eligible time.
-- [ ] Automatically attempt resolution after countdown.
-- [ ] Retry resolution at a modest interval while price is unchanged.
-- [ ] Provide manual `Check result` control.
-- [ ] Recover from expired snapshot by refetching `/state`.
-- [ ] Show recoverable API/provider errors without losing local user id.
+- [x] Fetch `/state` on page load.
+- [x] Render server score.
+- [x] Render server price snapshot and timestamp.
+- [x] Submit `direction` plus `priceSnapshotId`.
+- [x] Disable new guess buttons while a guess is active.
+- [x] Show pending guess and countdown/eligible time.
+- [x] Automatically attempt resolution after countdown.
+- [x] Retry resolution at a modest interval while price is unchanged.
+- [x] Recover from expired snapshot by refetching `/state`.
+- [x] Show recoverable API/provider errors without losing local user id.
 
 ## Tests
 
@@ -93,6 +92,6 @@
 - [x] Configure snapshot validity window.
 - [x] Configure provider cache TTL.
 - [x] Configure frontend API base URL.
-- [ ] Configure CORS for the frontend origin.
+- [x] Configure CORS for the frontend origin.
 - [x] Document local development setup.
-- [ ] Document deployment steps.
+- [x] Document deployment steps.
