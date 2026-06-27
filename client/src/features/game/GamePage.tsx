@@ -11,6 +11,7 @@ import { getAnonymousUserId } from '../../api/identity';
 import { GameHeader } from './components/GameHeader';
 import { GameWarnings } from './components/GameWarnings';
 import { GuessControls } from './components/GuessControls';
+import { GuessStateSkeleton } from './components/GuessStateSkeleton';
 import { PendingGuess } from './components/PendingGuess';
 import { PriceDisplay } from './components/PriceDisplay';
 import { DevWarnings } from './dev-warnings/DevWarnings';
@@ -31,6 +32,7 @@ const GamePage = () => {
 
   const gameState = gameStateQuery.data ?? null;
   const latestPrice = priceStateQuery.data?.latestPrice ?? null;
+  const isGameStateKnown = gameStateQuery.data !== undefined;
 
   const feedback = useMemo(
     () => (gameState ? getFeedbackMessage(gameState.feedback) : null),
@@ -88,7 +90,9 @@ const GamePage = () => {
               }
             />
 
-            {activeGuess ? (
+            {!isGameStateKnown ? (
+              <GuessStateSkeleton />
+            ) : activeGuess ? (
               <div className="grid gap-4">
                 <PendingGuess
                   direction={activeGuess.direction}

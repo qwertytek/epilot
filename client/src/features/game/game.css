@@ -141,6 +141,41 @@
   animation: skeleton-shimmer 1.4s ease infinite;
 }
 
+.guess-state-skeleton-line,
+.guess-state-skeleton-button {
+  display: block;
+  border-radius: 0.5rem;
+  background: linear-gradient(
+    90deg,
+    var(--color-brand-border) 25%,
+    white 37%,
+    var(--color-brand-border) 63%
+  );
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+}
+
+.guess-state-skeleton-kicker {
+  width: 8.5rem;
+  height: 0.875rem;
+}
+
+.guess-state-skeleton-heading {
+  width: min(100%, 18rem);
+  height: 2rem;
+  margin-top: 0.75rem;
+}
+
+.guess-state-skeleton-copy {
+  width: min(100%, 24rem);
+  height: 1rem;
+  margin-top: 0.875rem;
+}
+
+.guess-state-skeleton-button {
+  min-height: 3.5rem;
+}
+
 .price-loading-dots {
   display: inline-block;
   position: relative;
