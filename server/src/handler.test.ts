@@ -162,6 +162,7 @@ test('first GET /state returns score 0 and no active guess without fetching pric
   );
   assert.equal(body.score, 0);
   assert.equal(body.activeGuess, null);
+  assert.equal(body.lastBet, null);
   assert.equal(body.feedback.type, 'NONE');
 });
 
@@ -231,6 +232,11 @@ test('valid unexpired snapshot token can create a guess', async () => {
   assert.equal(body.score, 0);
   assert.equal(body.activeGuess?.direction, 'UP');
   assert.equal(body.activeGuess?.startPriceUsd, 100);
+  assert.deepEqual(body.lastBet, {
+    direction: 'UP',
+    priceUsd: 100,
+    placedAt: body.activeGuess?.createdAt,
+  });
   assert.equal(body.feedback.type, 'GUESS_CREATED');
 });
 
@@ -428,6 +434,11 @@ test('GET /state resolves an eligible winning guess and updates score', async ()
   assert.equal(response.statusCode, 200);
   assert.equal(body.score, 1);
   assert.equal(body.activeGuess, null);
+  assert.deepEqual(body.lastBet, {
+    direction: 'UP',
+    priceUsd: 100,
+    placedAt: '2026-06-25T12:00:00.000Z',
+  });
   assert.equal(body.latestPrice?.priceUsd, 101);
   assert.equal(body.feedback.type, 'RESOLVED');
   assert.equal(body.feedback.outcome, 'CORRECT');

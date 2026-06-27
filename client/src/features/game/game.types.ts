@@ -13,6 +13,7 @@ export type PriceDisplayProps = {
   isRefreshing?: boolean;
   isStale?: boolean;
   onRefresh: () => void;
+  lastBet: string | null;
   price: string | null;
   updatedAt: string | null;
 };

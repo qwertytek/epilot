@@ -48,6 +48,7 @@ const installBrowserMocks = () => {
         json: async () => ({
           score: 0,
           activeGuess: null,
+          lastBet: null,
           feedback: { type: 'NONE' },
         }),
       };
@@ -117,6 +118,11 @@ test('resolved comparison price remains available while its snapshot is fresh', 
   const previousState: GameStateResponse = {
     score: 1,
     activeGuess: null,
+    lastBet: {
+      direction: 'UP',
+      priceUsd: 100,
+      placedAt: new Date().toISOString(),
+    },
     feedback: {
       type: 'RESOLVED',
       outcome: 'CORRECT',
@@ -127,6 +133,11 @@ test('resolved comparison price remains available while its snapshot is fresh', 
   const nextState: GameStateResponse = {
     score: 1,
     activeGuess: null,
+    lastBet: {
+      direction: 'UP',
+      priceUsd: 100,
+      placedAt: new Date().toISOString(),
+    },
     feedback: { type: 'NONE' },
   };
   const structuralSharing =

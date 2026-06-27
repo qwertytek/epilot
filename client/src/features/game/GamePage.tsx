@@ -171,6 +171,11 @@ const GamePage = () => {
               onRefresh={() => {
                 void priceStateQuery.refetch();
               }}
+              lastBet={
+                gameState?.lastBet
+                  ? formatCurrencyUsd(gameState.lastBet.priceUsd)
+                  : null
+              }
               price={
                 displayedPrice
                   ? formatCurrencyUsd(displayedPrice.priceUsd)

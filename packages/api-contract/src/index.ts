@@ -50,9 +50,16 @@ export type ActiveGuess = {
   eligibleAt: string;
 };
 
+export type LastBet = {
+  direction: GuessDirection;
+  priceUsd: number;
+  placedAt: string;
+};
+
 export type GameStateResponse = {
   score: number;
   activeGuess: ActiveGuess | null;
+  lastBet: LastBet | null;
   feedback: Feedback;
   latestPrice?: PriceSnapshot;
 };

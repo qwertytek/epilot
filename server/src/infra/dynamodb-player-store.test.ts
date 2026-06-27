@@ -140,6 +140,9 @@ test('DynamoDB player store persists active guess with generated id', async () =
           userId: 'user-1',
           score: 0,
           activeGuess: guess,
+          lastBet: (
+            command.input.ExpressionAttributeValues as Record<string, unknown>
+          )[':lastBet'],
           createdAt: '2026-06-25T12:00:00.000Z',
           updatedAt: '2026-06-25T12:00:10.000Z',
         },
@@ -158,6 +161,11 @@ test('DynamoDB player store persists active guess with generated id', async () =
 
   assert.equal(player.activeGuess?.direction, 'UP');
   assert.equal(player.activeGuess?.startPriceUsd, 101);
+  assert.deepEqual(player.lastBet, {
+    direction: 'UP',
+    priceUsd: 101,
+    placedAt: '2026-06-25T12:00:10.000Z',
+  });
   assert.equal(typeof player.activeGuess?.id, 'string');
   assert.equal(
     commands.find((command) => command instanceof FakeUpdateCommand)?.input

@@ -185,6 +185,11 @@ const useCreateGuessMutation = (userId: string) => {
               createdAt.getTime() + optimisticGuessEligibilityMs,
             ).toISOString(),
           },
+          lastBet: {
+            direction,
+            priceUsd: previousPriceState.latestPrice.priceUsd,
+            placedAt: createdAt.toISOString(),
+          },
           feedback: {
             type: 'NONE',
           },

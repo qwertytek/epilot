@@ -172,23 +172,32 @@ export const createDynamoDbPlayerStore = ({
       id: randomUUID(),
       ...activeGuess,
     };
+    const lastBet: Player['lastBet'] = {
+      direction: activeGuess.direction,
+      priceUsd: activeGuess.startPriceUsd,
+      placedAt: activeGuess.createdAt,
+    };
 
     try {
       const response = await client.send<DynamoUpdateResponse>(
         new dynamo.UpdateCommand({
           TableName: tableName,
           Key: { userId },
-          UpdateExpression: 'SET activeGuess = :guess, updatedAt = :updatedAt',
+          UpdateExpression:
+            'SET activeGuess = :guess, lastBet = :lastBet, updatedAt = :updatedAt',
           ConditionExpression: 'attribute_not_exists(activeGuess)',
           ExpressionAttributeValues: {
             ':guess': guess,
+            ':lastBet': lastBet,
             ':updatedAt': activeGuess.createdAt,
           },
           ReturnValues: 'ALL_NEW',
         }),
       );
 
-      return response.Attributes ?? { ...existingPlayer, activeGuess: guess };
+      return (
+        response.Attributes ?? { ...existingPlayer, activeGuess: guess, lastBet }
+      );
     } catch (error) {
       if (isConditionalFailure(error)) {
         throw new Error('ACTIVE_GUESS_EXISTS', { cause: error });

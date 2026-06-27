@@ -6,6 +6,7 @@ export const PriceDisplay = ({
   animationTone,
   isRefreshing = false,
   isStale = false,
+  lastBet,
   onRefresh,
   price,
   updatedAt,
@@ -67,6 +68,11 @@ export const PriceDisplay = ({
           ? `Snapshot ${displayedUpdatedAt}`
           : 'Snapshot pending'}
       </p>
+      {lastBet ? (
+        <p className="game-last-bet mt-4 text-sm font-semibold text-brand-primary">
+          Last bet: <span>{lastBet}</span>
+        </p>
+      ) : null}
       {isStale && !isLoadingStalePrice ? (
         <div className="price-stale-overlay">
           <button
