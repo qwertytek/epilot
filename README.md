@@ -50,8 +50,10 @@ pnpm start
 This starts DynamoDB Local, the SAM API on `http://127.0.0.1:3000`, and the
 Vite client on `http://localhost:5173`.
 
-The client reads `VITE_API_BASE_URL` when set and otherwise calls
-`http://127.0.0.1:3000`.
+The client defaults to `VITE_API_BASE_URL` when set and otherwise calls
+`http://127.0.0.1:3000`. The browser can switch API targets at runtime from the
+in-app API control, or with `?api=local`, `?api=live`, or
+`?apiBaseUrl=https://your-api.example.com`.
 
 ## Local API
 
@@ -72,6 +74,14 @@ Manual service commands are also available:
 pnpm dynamodb:start
 pnpm --dir client dev
 pnpm --dir server start
+```
+
+To use the deployed frontend against a local API, start SAM with the deployed
+frontend origin allowed by CORS:
+
+```bash
+pnpm --dir server build
+sam local start-api --parameter-overrides DynamoDbEndpoint=http://host.docker.internal:8000 SnapshotSigningSecret=local-dev-snapshot-signing-secret FrontendOrigin=https://your-frontend.example.com
 ```
 
 To reset local player state:
@@ -106,7 +116,29 @@ API. The backend uses AWS Lambda, API Gateway HTTP API, and DynamoDB through the
 SAM template in `server/template.yaml`. The frontend can be hosted by any static
 site host, such as AWS Amplify Hosting, S3 + CloudFront, Vercel, or Netlify.
 
-Before deploying, run the quality checks:
+### First-Time AWS Setup
+
+To deploy the backend to AWS from a new machine or AWS account, install and
+configure:
+
+- Node.js and pnpm, matching the versions in the Requirements section.
+- AWS CLI v2.
+- AWS SAM CLI.
+- An AWS account with permission to create CloudFormation stacks, IAM roles,
+  Lambda functions, API Gateway HTTP APIs, DynamoDB tables, S3 deployment
+  buckets, and CloudWatch log groups.
+
+Configure AWS credentials before running SAM:
+
+```bash
+aws configure
+aws sts get-caller-identity
+```
+
+`aws sts get-caller-identity` should print the AWS account and IAM identity that
+will own the deployment. If it fails, fix AWS credentials before deploying.
+
+Install project dependencies and run the checks:
 
 ```bash
 pnpm install
@@ -116,18 +148,58 @@ pnpm --dir client test
 pnpm --dir server test
 ```
 
-### Backend
+Generate a signing secret for the first backend deploy:
 
-Build and deploy the SAM application from the `server` package:
+```bash
+openssl rand -base64 32
+```
+
+Do not commit this value. SAM asks for it as `SnapshotSigningSecret`; the
+CloudFormation parameter is marked `NoEcho`, so normal stack views do not show
+it in plain text.
+
+Run the guided backend deploy from the repository root:
 
 ```bash
 pnpm --dir server build
 sam deploy --guided --template-file server/.aws-sam/build/template.yaml
 ```
 
-During `sam deploy --guided`, choose an AWS region and stack name. This assumes
-`aws configure` has already been run for the AWS account and region you want to
-use. The stack creates:
+Recommended guided deploy answers:
+
+```text
+Stack Name: epilot-btc-game
+AWS Region: eu-central-1
+Parameter PlayerTableName: epilot-btc-guess-players
+Parameter FrontendOrigin: http://localhost:5173
+Parameter SnapshotSigningSecret: <paste generated secret>
+Parameter DynamoDbEndpoint: <leave blank>
+Confirm changes before deploy: y
+Allow SAM CLI IAM role creation: Y
+Disable rollback: N
+ApiFunction has no authentication: y
+Save arguments to configuration file: Y
+SAM configuration file: server/samconfig.toml
+SAM configuration environment: default
+```
+
+SAM may ask the unauthenticated API question once per route. That is expected
+because the same Lambda is attached to multiple public browser endpoints.
+
+After the first successful deploy, SAM prints a `GameApiUrl` output. Use that
+URL as the frontend API base URL.
+
+Subsequent backend deploys can run from the repository root:
+
+```bash
+pnpm deploy:server
+```
+
+This script builds the server and deploys using `server/samconfig.toml`.
+
+### Backend
+
+The backend SAM stack creates:
 
 - an API Gateway HTTP API for the game endpoints;
 - a Lambda function running the TypeScript backend build;
@@ -217,8 +289,11 @@ VITE_API_BASE_URL=https://your-api-id.execute-api.your-region.amazonaws.com pnpm
 ```
 
 Deploy the generated `client/dist` directory to the static host of your choice.
-The same `VITE_API_BASE_URL` value must be configured in that host's build
-environment so the browser calls the deployed backend instead of the local API.
+The same `VITE_API_BASE_URL` value should be configured in that host's build
+environment so the live runtime target points at the deployed backend. After the
+frontend is deployed, the in-app API control can temporarily point the same
+static frontend at `http://127.0.0.1:3000`, back to the live build URL, or to a
+custom API URL without rebuilding.
 
 After the frontend is live, verify the deployed app by:
 
