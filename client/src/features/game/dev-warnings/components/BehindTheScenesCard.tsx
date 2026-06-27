@@ -1,5 +1,8 @@
-import type { BehindTheScenesCardProps } from '../game.types';
-import { GameFeedback } from './GameFeedback';
+import { GameFeedback } from '../../components/GameFeedback';
+
+type BehindTheScenesCardProps = {
+  feedbackMessages: string[];
+};
 
 export const BehindTheScenesCard = ({
   feedbackMessages,

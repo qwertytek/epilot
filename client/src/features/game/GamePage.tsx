@@ -6,16 +6,15 @@ import {
   formatCurrencyUsd,
   formatDateTime,
 } from '../../shared/utils/formatters';
-import { isDevelopmentApp } from '../../app/environment';
 import { getErrorMessage } from '../../shared/utils/errors';
 import { ApiError } from '../../api/http';
 import { getAnonymousUserId } from '../../api/identity';
-import { BehindTheScenesCard } from './components/BehindTheScenesCard';
 import { GameFeedback } from './components/GameFeedback';
 import { GameHeader } from './components/GameHeader';
 import { GuessControls } from './components/GuessControls';
 import { PendingGuess } from './components/PendingGuess';
 import { PriceDisplay } from './components/PriceDisplay';
+import { DevWarnings } from './dev-warnings/DevWarnings';
 import {
   useCreateGuessMutation,
   useGameStateQuery,
@@ -62,7 +61,6 @@ const isScheduledNotification = (
   notification.expiresAt !== null && !notification.isExiting;
 
 const GamePage = () => {
-  const [showBehindTheScenes, setShowBehindTheScenes] = useState(false);
   const [feedbackNotifications, setFeedbackNotifications] = useState<
     FeedbackNotification[]
   >([]);
@@ -114,18 +112,6 @@ const GamePage = () => {
   const pendingDirection = isSubmitting
     ? createGuessMutation.variables?.direction
     : undefined;
-  const behindTheScenesFeedback = [
-    gameState && gameStateQuery.isFetching
-      ? 'Refreshing game state in the background...'
-      : null,
-    latestPrice && priceStateQuery.isFetching
-      ? 'Refreshing live price in the background...'
-      : null,
-    isCheckingResults ? 'Checking for results...' : null,
-    latestPrice && priceStateQuery.isStale && !priceStateQuery.isFetching
-      ? 'Showing cached price while the latest price refreshes.'
-      : null,
-  ].filter((message): message is string => message !== null);
 
   useEffect(() => {
     const now = Date.now();
@@ -378,40 +364,15 @@ const GamePage = () => {
             )}
           </div>
 
-          {isDevelopmentApp ? (
-            <div className="mt-8 border-t border-brand-border pt-5">
-              <label className="behind-scenes-toggle">
-                <span className="grid gap-1">
-                  <span className="text-sm font-semibold text-brand-navy">
-                    Behind the scenes
-                  </span>
-                  <span className="behind-scenes-warning">
-                    <span
-                      className="behind-scenes-warning-icon"
-                      aria-hidden="true"
-                    >
-                      !
-                    </span>
-                    <span>Disabled in production using env production.</span>
-                  </span>
-                </span>
-                <input
-                  checked={showBehindTheScenes}
-                  className="sr-only"
-                  onChange={(event) =>
-                    setShowBehindTheScenes(event.target.checked)
-                  }
-                  type="checkbox"
-                />
-                <span className="behind-scenes-switch" aria-hidden="true" />
-              </label>
-            </div>
-          ) : null}
+          <DevWarnings
+            hasGameState={gameState !== null}
+            hasLatestPrice={latestPrice !== null}
+            isCheckingResults={isCheckingResults}
+            isGameStateFetching={gameStateQuery.isFetching}
+            isPriceFetching={priceStateQuery.isFetching}
+            isPriceStale={priceStateQuery.isStale}
+          />
         </div>
-
-        {isDevelopmentApp && showBehindTheScenes ? (
-          <BehindTheScenesCard feedbackMessages={behindTheScenesFeedback} />
-        ) : null}
       </main>
     </div>
   );
