@@ -5,9 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:live": "vite --mode live",
     "start": "vite",
+    "start:live": "vite --mode live",
     "test": "tsc --build tsconfig.test.json --clean && tsc --build ../packages/api-contract tsconfig.test.json && node --test 'dist-test/features/**/*.test.js'",
     "build": "vite build",
+    "build:live": "vite build --mode live",
     "preview": "vite preview"
   },
   "devDependencies": {

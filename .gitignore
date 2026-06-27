@@ -5,6 +5,10 @@ dist/
 dist-test/
 *.tsbuildinfo
 
+# Local environment overrides
+.env*.local
+.env
+
 # Server
 .aws-sam/
 

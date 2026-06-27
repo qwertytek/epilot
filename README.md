@@ -50,10 +50,9 @@ pnpm start
 This starts DynamoDB Local, the SAM API on `http://127.0.0.1:3000`, and the
 Vite client on `http://localhost:5173`.
 
-The client defaults to `VITE_API_BASE_URL` when set and otherwise calls
-`http://127.0.0.1:3000`. The browser can switch API targets at runtime from the
-in-app API control, or with `?api=local`, `?api=live`, or
-`?apiBaseUrl=https://your-api.example.com`.
+The client reads both API endpoints from `client/.env`. `pnpm start` uses
+`VITE_API_BASE_LOCAL`, while `pnpm --dir client start --mode live` uses
+`VITE_API_BASE_LIVE`.
 
 ## Local API
 
@@ -285,15 +284,13 @@ configuration and secret lifecycle management.
 Build the frontend with the deployed API URL:
 
 ```bash
-VITE_API_BASE_URL=https://your-api-id.execute-api.your-region.amazonaws.com pnpm --dir client build
+# edit VITE_API_BASE_LIVE in client/.env with the GameApiUrl from SAM
+pnpm --dir client build --mode live
 ```
 
 Deploy the generated `client/dist` directory to the static host of your choice.
-The same `VITE_API_BASE_URL` value should be configured in that host's build
-environment so the live runtime target points at the deployed backend. After the
-frontend is deployed, the in-app API control can temporarily point the same
-static frontend at `http://127.0.0.1:3000`, back to the live build URL, or to a
-custom API URL without rebuilding.
+In hosted build environments, configure `VITE_API_BASE_LIVE` as a build
+environment variable.
 
 After the frontend is live, verify the deployed app by:
 

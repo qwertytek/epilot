@@ -13,16 +13,30 @@ pnpm --dir client dev
 
 Vite prints the local URL when the development server starts.
 
-The client calls `VITE_API_BASE_URL` when it is set and otherwise defaults to
-`http://127.0.0.1:3000`.
+The client reads both API endpoints from `client/.env`:
+
+```text
+VITE_API_BASE_LOCAL=http://127.0.0.1:3000
+VITE_API_BASE_LIVE=https://your-api-id.execute-api.your-region.amazonaws.com
+```
+
+No mode argument uses `VITE_API_BASE_LOCAL`. Passing `--mode live` uses
+`VITE_API_BASE_LIVE`.
+
+```bash
+pnpm --dir client start
+pnpm --dir client start --mode live
+```
 
 ## Available commands
 
 ```bash
-pnpm --dir client dev      # start the development server
-pnpm --dir client test     # type-check and run client node:test tests
-pnpm --dir client build    # create a production build
-pnpm --dir client preview  # serve the production build locally
+pnpm --dir client start                 # start with the local API
+pnpm --dir client start --mode live     # start with the deployed API
+pnpm --dir client build                 # build with the local API
+pnpm --dir client build --mode live     # build with the deployed API
+pnpm --dir client test                  # type-check and run client node:test tests
+pnpm --dir client preview               # serve the production build locally
 ```
 
 ## Current scope
