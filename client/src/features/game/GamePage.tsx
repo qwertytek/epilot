@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { GuessDirection } from '@epilot/api-contract';
 
 import { useResolveCountdown } from '../../hooks/useResolveCountdown';
@@ -6,8 +6,10 @@ import {
   formatCurrencyUsd,
   formatDateTime,
 } from '../../shared/utils/formatters';
+import { isDevelopmentApp } from '../../app/environment';
 import { getErrorMessage } from '../../shared/utils/errors';
 import { getAnonymousUserId } from '../../api/identity';
+import { BehindTheScenesCard } from './components/BehindTheScenesCard';
 import { GameFeedback } from './components/GameFeedback';
 import { GameHeader } from './components/GameHeader';
 import { GuessControls } from './components/GuessControls';
@@ -23,6 +25,7 @@ import { getFeedbackMessage } from './game.feedback';
 import './game.css';
 
 const GamePage = () => {
+  const [showBehindTheScenes, setShowBehindTheScenes] = useState(false);
   const userId = getAnonymousUserId();
   const gameStateQuery = useGameStateQuery(userId);
   const priceStateQuery = usePriceStateQuery();
@@ -47,6 +50,18 @@ const GamePage = () => {
   const pendingDirection = isSubmitting
     ? createGuessMutation.variables?.direction
     : undefined;
+  const behindTheScenesFeedback = [
+    gameState && gameStateQuery.isFetching
+      ? 'Refreshing game state in the background...'
+      : null,
+    latestPrice && priceStateQuery.isFetching
+      ? 'Refreshing live price in the background...'
+      : null,
+    isCheckingResults ? 'Checking for results...' : null,
+    latestPrice && priceStateQuery.isStale && !priceStateQuery.isFetching
+      ? 'Showing cached price while the latest price refreshes.'
+      : null,
+  ].filter((message): message is string => message !== null);
 
   const handleGuess = async (direction: GuessDirection) => {
     if (
@@ -79,20 +94,6 @@ const GamePage = () => {
                 )}
                 tone="error"
               />
-            ) : null}
-            {gameState && gameStateQuery.isFetching ? (
-              <GameFeedback message="Refreshing game state in the background..." />
-            ) : null}
-            {latestPrice && priceStateQuery.isFetching ? (
-              <GameFeedback message="Refreshing live price in the background..." />
-            ) : null}
-            {isCheckingResults ? (
-              <GameFeedback message="Checking for results..." />
-            ) : null}
-            {latestPrice &&
-            priceStateQuery.isStale &&
-            !priceStateQuery.isFetching ? (
-              <GameFeedback message="Showing cached price while the latest price refreshes." />
             ) : null}
             {feedback ? <GameFeedback {...feedback} /> : null}
           </div>
@@ -128,7 +129,41 @@ const GamePage = () => {
               />
             )}
           </div>
+
+          {isDevelopmentApp ? (
+            <div className="mt-8 border-t border-brand-border pt-5">
+              <label className="behind-scenes-toggle">
+                <span className="grid gap-1">
+                  <span className="text-sm font-semibold text-brand-navy">
+                    Behind the scenes
+                  </span>
+                  <span className="behind-scenes-warning">
+                    <span
+                      className="behind-scenes-warning-icon"
+                      aria-hidden="true"
+                    >
+                      !
+                    </span>
+                    <span>Disabled in production using env production.</span>
+                  </span>
+                </span>
+                <input
+                  checked={showBehindTheScenes}
+                  className="sr-only"
+                  onChange={(event) =>
+                    setShowBehindTheScenes(event.target.checked)
+                  }
+                  type="checkbox"
+                />
+                <span className="behind-scenes-switch" aria-hidden="true" />
+              </label>
+            </div>
+          ) : null}
         </div>
+
+        {isDevelopmentApp && showBehindTheScenes ? (
+          <BehindTheScenesCard feedbackMessages={behindTheScenesFeedback} />
+        ) : null}
       </main>
     </div>
   );

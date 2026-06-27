@@ -18,10 +18,22 @@ The client reads both API endpoints from `client/.env`:
 ```text
 VITE_API_BASE_LOCAL=http://127.0.0.1:3000
 VITE_API_BASE_LIVE=https://your-api-id.execute-api.your-region.amazonaws.com
+VITE_APP_ENV=development
 ```
 
 No mode argument uses `VITE_API_BASE_LOCAL`. Passing `--mode live` uses
 `VITE_API_BASE_LIVE`.
+
+`VITE_APP_ENV` controls the product UI environment. It defaults to
+`development`, including when the client runs with `--mode live` or is hosted
+from a static deployment. Set `VITE_APP_ENV=production` only when the deployed
+client should hide development-only UI such as the behind-the-scenes feedback
+panel.
+
+In development UI mode, the game shows a "Behind the scenes" toggle with
+background refresh, cached price, and result-check status messages.
+For this exercise, the shared live link is intentionally expected to use
+`VITE_APP_ENV=development` so reviewers can inspect that behavior.
 
 ```bash
 pnpm --dir client start
@@ -51,7 +63,7 @@ The client renders a responsive game view connected to the backend API. It curre
 - optimistic pending-guess UI while a guess is submitted;
 - a countdown before the active guess is checked automatically;
 - automatic result checks through `GET /state`, with `POST /guesses/resolve` still available in the API;
-- feedback for loading, background refresh, stale cached state, API errors, result checks, unchanged prices, and resolved score changes.
+- feedback for loading, API errors, result checks, unchanged prices, resolved score changes, and development-only behind-the-scenes refresh/cache status.
 
 The client API layer uses the shared `@epilot/api-contract` package for request and response types. TanStack Query owns game-state fetching, mutation cache updates, retry behavior, stale-state handling, and background refetches.
 

@@ -27,3 +27,7 @@ export type GameFeedbackProps = {
   message: string;
   tone?: 'neutral' | 'success' | 'error';
 };
+
+export type BehindTheScenesCardProps = {
+  feedbackMessages: string[];
+};
