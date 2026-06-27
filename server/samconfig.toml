@@ -1,0 +1,14 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "epilot-btc-game"
+template_file = "server/.aws-sam/build/template.yaml"
+resolve_s3 = true
+s3_prefix = "epilot-btc-game"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "PlayerTableName=\"epilot-btc-guess-players\" FrontendOrigin=\"http://localhost:5173\" DynamoDbEndpoint=\"\""
+image_repositories = []
+
+[default.global.parameters]
+region = "eu-central-1"

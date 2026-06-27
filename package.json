@@ -8,6 +8,7 @@
     "format:check": "prettier --check .",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "deploy:server": "pnpm --dir server build && sam deploy --config-file server/samconfig.toml",
     "prepare": "husky",
     "start": "pnpm dynamodb:start && pnpm start:dev",
     "start:dev": "concurrently --names client,server --prefix-colors cyan,green --kill-others-on-fail \"pnpm --dir client start\" \"pnpm --dir server start\"",
