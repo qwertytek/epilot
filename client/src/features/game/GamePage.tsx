@@ -105,12 +105,11 @@ const GamePage = () => {
   const userId = getAnonymousUserId();
   const gameStateQuery = useGameStateQuery(userId);
   const activeGuess = gameStateQuery.data?.activeGuess ?? null;
+  const activeGuessId = activeGuess?.id ?? null;
   const lastActiveGuessRef = useRef(activeGuess);
   const lastAutoRefreshedPriceIdRef = useRef<string | null>(null);
   const resolvedPrice = gameStateQuery.data?.latestPrice ?? null;
-  const priceStateQuery = usePriceStateQuery(
-    gameStateQuery.data?.activeGuess === null && resolvedPrice === null,
-  );
+  const priceStateQuery = usePriceStateQuery(resolvedPrice === null);
   const createGuessMutation = useCreateGuessMutation(userId);
   const [remainingPriceExpiryRefreshes, setRemainingPriceExpiryRefreshes] =
     useState(getInitialPriceExpiryRefreshLimit);
@@ -125,16 +124,10 @@ const GamePage = () => {
   const isCurrentPriceSubmittable =
     currentPrice !== null &&
     !isPriceExpired(currentPrice, priceSubmitExpiryBufferMs);
-  const displayedPrice = activeGuess
-    ? {
-        priceUsd: activeGuess.startPriceUsd,
-        observedAt: activeGuess.createdAt,
-        expiresAt: null,
-      }
-    : currentPrice;
+  const displayedPrice = currentPrice;
   const isGameStateKnown = gameStateQuery.data !== undefined;
-  const isPriceStale =
-    activeGuess === null && currentPrice !== null && isCurrentPriceExpired;
+  const isPriceStale = currentPrice !== null && isCurrentPriceExpired;
+  const shouldShowStalePriceRefresh = activeGuess === null && isPriceStale;
 
   const feedback = useMemo(
     () => (gameState ? getFeedbackMessage(gameState.feedback) : null),
@@ -199,7 +192,14 @@ const GamePage = () => {
   }, [activeGuess]);
 
   useEffect(() => {
-    if (activeGuess !== null || currentPrice === null) {
+    if (activeGuessId) {
+      lastAutoRefreshedPriceIdRef.current = null;
+      setRemainingPriceExpiryRefreshes(getInitialPriceExpiryRefreshLimit());
+    }
+  }, [activeGuessId]);
+
+  useEffect(() => {
+    if (currentPrice === null) {
       return;
     }
 
@@ -219,30 +219,31 @@ const GamePage = () => {
       previousPrice: formatCurrencyUsd(previousPrice.priceUsd),
       tone: getPriceAnimationTone(previousPrice, currentPrice),
     });
-  }, [activeGuess, currentPrice, resolvedAnimationKey]);
+  }, [currentPrice, resolvedAnimationKey]);
 
   useEffect(() => {
     if (
       !isPriceStale ||
       currentPrice === null ||
-      activeGuess !== null ||
       priceStateQuery.isFetching ||
-      remainingPriceExpiryRefreshes <= 0 ||
+      (activeGuess === null && remainingPriceExpiryRefreshes <= 0) ||
       lastAutoRefreshedPriceIdRef.current === currentPrice.priceSnapshotId
     ) {
       return;
     }
 
     lastAutoRefreshedPriceIdRef.current = currentPrice.priceSnapshotId;
-    setRemainingPriceExpiryRefreshes((remainingRefreshes) => {
-      const nextRemainingRefreshes = Math.max(remainingRefreshes - 1, 0);
+    if (activeGuess === null) {
+      setRemainingPriceExpiryRefreshes((remainingRefreshes) => {
+        const nextRemainingRefreshes = Math.max(remainingRefreshes - 1, 0);
 
-      if (nextRemainingRefreshes === 0) {
-        storeReducedPriceExpiryRefreshLimit();
-      }
+        if (nextRemainingRefreshes === 0) {
+          storeReducedPriceExpiryRefreshLimit();
+        }
 
-      return nextRemainingRefreshes;
-    });
+        return nextRemainingRefreshes;
+      });
+    }
     void priceStateQuery.refetch();
   }, [
     activeGuess,
@@ -285,8 +286,8 @@ const GamePage = () => {
               animationKey={priceAnimation?.key}
               animationPreviousPrice={priceAnimation?.previousPrice}
               animationTone={priceAnimation?.tone}
-              isRefreshing={activeGuess === null && priceStateQuery.isFetching}
-              isStale={isPriceStale}
+              isRefreshing={priceStateQuery.isFetching}
+              isStale={shouldShowStalePriceRefresh}
               onRefresh={() => {
                 lastAutoRefreshedPriceIdRef.current =
                   currentPrice?.priceSnapshotId ?? null;

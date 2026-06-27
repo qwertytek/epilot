@@ -103,7 +103,7 @@ test('createGuess submits direction and priceSnapshotId without a raw price', as
   });
 });
 
-test('price query can be disabled while a guess is active', () => {
+test('price query options respect the explicit enabled flag', () => {
   assert.equal(createPriceStateQueryOptions(false).enabled, false);
   assert.equal(createPriceStateQueryOptions(true).enabled, true);
 });
