@@ -1,9 +1,11 @@
 import { useState } from 'react';
 
+import { ApiError } from '../../../api/http';
 import { isDevelopmentApp } from '../../../app/environment';
 import { BehindTheScenesCard } from './components/BehindTheScenesCard';
 
 type DevWarningsProps = {
+  error: unknown;
   hasGameState: boolean;
   hasLatestPrice: boolean;
   isCheckingResults: boolean;
@@ -12,7 +14,12 @@ type DevWarningsProps = {
   isPriceStale: boolean;
 };
 
+const isExpiredPriceSnapshotError = (error: unknown) =>
+  error instanceof ApiError &&
+  error.error.error.code === 'PRICE_SNAPSHOT_EXPIRED';
+
 const getBehindTheScenesFeedback = ({
+  error,
   hasGameState,
   hasLatestPrice,
   isCheckingResults,
@@ -21,6 +28,9 @@ const getBehindTheScenesFeedback = ({
   isPriceStale,
 }: DevWarningsProps) =>
   [
+    isExpiredPriceSnapshotError(error)
+      ? 'Expired snapshot; fetching new price so user can make new bet.'
+      : null,
     hasGameState && isGameStateFetching
       ? 'Refreshing game state in the background...'
       : null,

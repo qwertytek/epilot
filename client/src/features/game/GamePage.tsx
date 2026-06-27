@@ -115,6 +115,7 @@ const GamePage = () => {
           </div>
 
           <DevWarnings
+            error={error}
             hasGameState={gameState !== null}
             hasLatestPrice={latestPrice !== null}
             isCheckingResults={isCheckingResults}
