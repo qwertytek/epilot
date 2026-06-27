@@ -7,6 +7,7 @@ export type GameHeaderProps = {
 };
 
 export type PriceDisplayProps = {
+  animationBlink?: 'single' | 'repeat';
   animationKey?: string;
   animationPreviousPrice?: string;
   animationTone?: 'success' | 'error';

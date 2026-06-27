@@ -188,6 +188,8 @@
 }
 
 .price-loading-dots {
+  --price-loading-dot-color: var(--color-brand-navy);
+
   display: inline-block;
   position: relative;
   width: 1.05em;
@@ -198,9 +200,13 @@
 .price-loading-dots::after {
   position: absolute;
   inset: 0;
-  color: var(--color-brand-navy);
+  color: var(--price-loading-dot-color);
   content: '.';
   animation: price-loading-dots 1.2s steps(1, end) infinite;
+}
+
+.price-status-dots {
+  --price-loading-dot-color: var(--color-brand-muted);
 }
 
 .game-price-value {
@@ -234,7 +240,15 @@
   transform: translateY(0.35rem) scale(0.98);
   animation:
     price-value-new-appear 340ms ease 820ms forwards,
-    price-value-new-blink 900ms ease 1.18s 3;
+    price-value-new-blink 900ms ease 1.18s var(--price-blink-count, 3);
+}
+
+.price-value-new.blink-single {
+  --price-blink-count: 1;
+}
+
+.price-value-new.blink-repeat {
+  --price-blink-count: 3;
 }
 
 .price-value-new.is-success {

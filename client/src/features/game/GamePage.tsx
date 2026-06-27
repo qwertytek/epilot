@@ -64,6 +64,12 @@ const getPriceExpiresInMs = (price: PriceSnapshot | null) => {
 const isPriceExpired = (price: PriceSnapshot | null, bufferMs = 0): boolean =>
   getPriceExpiresInMs(price) <= bufferMs;
 
+const getPriceAnimationTone = (
+  previousPrice: PriceSnapshot,
+  nextPrice: PriceSnapshot,
+): 'success' | 'error' =>
+  nextPrice.priceUsd > previousPrice.priceUsd ? 'success' : 'error';
+
 const useIsPriceExpired = (price: PriceSnapshot | null) => {
   const [now, setNow] = useState(() => Date.now());
   const expiresAtMs = price ? Date.parse(price.expiresAt) : null;
@@ -147,7 +153,7 @@ const GamePage = () => {
     gameState?.feedback.type === 'RESOLVED'
       ? resolvedPrice?.priceSnapshotId
       : undefined;
-  const resolvedPriceAnimationTone =
+  const resolvedPriceAnimationTone: 'success' | 'error' | undefined =
     gameState?.feedback.type === 'RESOLVED'
       ? gameState.feedback.outcome === 'CORRECT'
         ? 'success'
@@ -157,12 +163,58 @@ const GamePage = () => {
     resolvedAnimationKey !== undefined && lastActiveGuessRef.current
       ? formatCurrencyUsd(lastActiveGuessRef.current.startPriceUsd)
       : undefined;
+  const lastLivePriceRef = useRef<PriceSnapshot | null>(null);
+  const [livePriceAnimation, setLivePriceAnimation] = useState<{
+    key: string;
+    previousPrice: string;
+    tone: 'success' | 'error';
+  } | null>(null);
+  const priceAnimation =
+    resolvedAnimationKey !== undefined
+      ? {
+          blink: 'repeat' as const,
+          key: resolvedAnimationKey,
+          previousPrice: resolvedPreviousPrice,
+          tone: resolvedPriceAnimationTone,
+        }
+      : livePriceAnimation
+        ? {
+            blink: 'single' as const,
+            key: livePriceAnimation.key,
+            previousPrice: livePriceAnimation.previousPrice,
+            tone: livePriceAnimation.tone,
+          }
+        : null;
 
   useEffect(() => {
     if (activeGuess) {
       lastActiveGuessRef.current = activeGuess;
     }
   }, [activeGuess]);
+
+  useEffect(() => {
+    if (activeGuess !== null || currentPrice === null) {
+      return;
+    }
+
+    const previousPrice = lastLivePriceRef.current;
+    lastLivePriceRef.current = currentPrice;
+
+    if (
+      previousPrice === null ||
+      previousPrice.priceSnapshotId === currentPrice.priceSnapshotId ||
+      previousPrice.priceUsd === currentPrice.priceUsd ||
+      resolvedAnimationKey !== undefined
+    ) {
+      return;
+    }
+
+    setLivePriceAnimation({
+      key: currentPrice.priceSnapshotId,
+      previousPrice: formatCurrencyUsd(previousPrice.priceUsd),
+      tone: getPriceAnimationTone(previousPrice, currentPrice),
+    });
+  }, [activeGuess, currentPrice, resolvedAnimationKey]);
 
   useEffect(() => {
     if (
@@ -224,9 +276,10 @@ const GamePage = () => {
 
           <div className="game-content-grid mt-9 border-t border-brand-border pt-8">
             <PriceDisplay
-              animationKey={resolvedAnimationKey}
-              animationPreviousPrice={resolvedPreviousPrice}
-              animationTone={resolvedPriceAnimationTone}
+              animationBlink={priceAnimation?.blink}
+              animationKey={priceAnimation?.key}
+              animationPreviousPrice={priceAnimation?.previousPrice}
+              animationTone={priceAnimation?.tone}
               isRefreshing={activeGuess === null && priceStateQuery.isFetching}
               isStale={isPriceStale}
               onRefresh={() => {

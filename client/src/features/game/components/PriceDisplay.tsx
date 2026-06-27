@@ -1,6 +1,7 @@
 import type { PriceDisplayProps } from '../game.types';
 
 export const PriceDisplay = ({
+  animationBlink = 'repeat',
   animationKey,
   animationPreviousPrice,
   animationTone,
@@ -11,22 +12,20 @@ export const PriceDisplay = ({
   price,
   updatedAt,
 }: PriceDisplayProps) => {
-  const isLoadingStalePrice = isStale && isRefreshing;
-  const displayedPrice = isLoadingStalePrice ? null : price;
-  const displayedUpdatedAt = isLoadingStalePrice ? null : updatedAt;
+  const isUpdatingExistingPrice = isRefreshing && price !== null;
   const shouldAnimatePrice =
     animationKey !== undefined &&
     animationPreviousPrice !== undefined &&
     animationTone !== undefined &&
-    displayedPrice !== null &&
-    animationPreviousPrice !== displayedPrice;
+    price !== null &&
+    animationPreviousPrice !== price;
 
   return (
     <section
-      aria-busy={isLoadingStalePrice}
+      aria-busy={isRefreshing}
       aria-labelledby="latest-price-heading"
       className={`game-price-panel${
-        isStale && !isLoadingStalePrice ? ' is-stale' : ''
+        isStale && !isUpdatingExistingPrice ? ' is-stale' : ''
       }`}
     >
       <p
@@ -38,7 +37,7 @@ export const PriceDisplay = ({
       <p className="game-price-value mt-4 text-4xl font-bold tracking-tight text-brand-navy sm:text-5xl">
         {shouldAnimatePrice ? (
           <span
-            aria-label={displayedPrice}
+            aria-label={price}
             className="price-transition"
             key={animationKey}
           >
@@ -47,13 +46,13 @@ export const PriceDisplay = ({
             </span>
             <span
               aria-hidden="true"
-              className={`price-value-new is-${animationTone}`}
+              className={`price-value-new is-${animationTone} blink-${animationBlink}`}
             >
-              {displayedPrice}
+              {price}
             </span>
           </span>
         ) : (
-          (displayedPrice ?? (
+          (price ?? (
             <span
               className="price-loading-dots"
               aria-label="Loading Bitcoin price"
@@ -64,16 +63,28 @@ export const PriceDisplay = ({
         )}
       </p>
       <p className="mt-3 text-sm text-brand-muted">
-        {displayedUpdatedAt
-          ? `Snapshot ${displayedUpdatedAt}`
-          : 'Snapshot pending'}
+        {isUpdatingExistingPrice ? (
+          <>
+            updating price
+            <span
+              aria-hidden="true"
+              className="price-loading-dots price-status-dots"
+            >
+              ...
+            </span>
+          </>
+        ) : updatedAt ? (
+          `Snapshot ${updatedAt}`
+        ) : (
+          'Snapshot pending'
+        )}
       </p>
       {lastBet ? (
         <p className="game-last-bet mt-4 text-sm font-semibold text-brand-primary">
           Last bet: <span>{lastBet}</span>
         </p>
       ) : null}
-      {isStale && !isLoadingStalePrice ? (
+      {isStale && !isUpdatingExistingPrice ? (
         <div className="price-stale-overlay">
           <button
             aria-label="Refresh latest Bitcoin price"
