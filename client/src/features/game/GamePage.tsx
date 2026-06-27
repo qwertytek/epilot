@@ -27,7 +27,10 @@ import './game.css';
 const GamePage = () => {
   const userId = getAnonymousUserId();
   const gameStateQuery = useGameStateQuery(userId);
-  const priceStateQuery = usePriceStateQuery();
+  const activeGuess = gameStateQuery.data?.activeGuess ?? null;
+  const priceStateQuery = usePriceStateQuery(
+    gameStateQuery.data?.activeGuess === null,
+  );
   const createGuessMutation = useCreateGuessMutation(userId);
 
   const gameState = gameStateQuery.data ?? null;
@@ -39,7 +42,6 @@ const GamePage = () => {
     [gameState],
   );
 
-  const activeGuess = gameState?.activeGuess ?? null;
   const isSubmitting = createGuessMutation.isPending;
   const isBusy =
     gameStateQuery.isLoading || priceStateQuery.isLoading || isSubmitting;

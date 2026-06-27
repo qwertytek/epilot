@@ -180,7 +180,6 @@ export const createGameService = ({
     if (Date.parse(activeGuess.eligibleAt) > now().getTime()) {
       return {
         ...players.toPublicState(player),
-        latestPrice: await createPriceSnapshot({ allowStale: true }),
         feedback: {
           type: 'NOT_READY',
           retryAt: activeGuess.eligibleAt,

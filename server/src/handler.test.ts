@@ -368,22 +368,25 @@ test('concurrent create requests result in exactly one active guess', async () =
   );
 });
 
-test('guess cannot resolve before 60 seconds', async () => {
-  const { handler } = createTestHandler([100, 110]);
-  const priceState = await getPriceState(handler);
-  await handler(
+test('guess cannot resolve before 60 seconds without fetching a new price', async () => {
+  const context = createTestHandler([100, 110]);
+  const priceState = await getPriceState(context.handler);
+  await context.handler(
     event('POST', '/guesses', {
       direction: 'UP',
       priceSnapshotId: priceState.latestPrice.priceSnapshotId,
     }),
   );
+  assert.equal(context.calls, 1);
 
-  const response = await handler(event('POST', '/guesses/resolve'));
+  const response = await context.handler(event('POST', '/guesses/resolve'));
   const body = json<ResolveGuessResponse>(response);
 
   assert.equal(response.statusCode, 200);
   assert.equal(body.feedback.type, 'NOT_READY');
   assert.equal(body.activeGuess?.direction, 'UP');
+  assert.equal(body.latestPrice, undefined);
+  assert.equal(context.calls, 1);
 });
 
 test('GET /state keeps guess pending before 60 seconds', async () => {
@@ -404,6 +407,7 @@ test('GET /state keeps guess pending before 60 seconds', async () => {
   assert.equal(body.score, 0);
   assert.equal(body.activeGuess?.direction, 'UP');
   assert.equal(body.feedback.type, 'NONE');
+  assert.equal(context.calls, 1);
 });
 
 test('GET /state resolves an eligible winning guess and updates score', async () => {
@@ -425,6 +429,7 @@ test('GET /state resolves an eligible winning guess and updates score', async ()
   assert.equal(body.activeGuess, null);
   assert.equal(body.feedback.type, 'RESOLVED');
   assert.equal(body.feedback.outcome, 'CORRECT');
+  assert.equal(context.calls, 2);
 });
 
 test('GET /state resolves an eligible losing guess and updates score', async () => {

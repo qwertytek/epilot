@@ -11,7 +11,8 @@ import { requestApi } from '../../api/http.js';
 
 const getGameState = (): Promise<GameStateResponse> => requestApi('/state');
 
-const getPriceState = (): Promise<PriceStateResponse> => requestApi('/price');
+const getPriceState = (signal?: AbortSignal): Promise<PriceStateResponse> =>
+  requestApi('/price', { signal });
 
 const createGuess = (
   direction: GuessDirection,

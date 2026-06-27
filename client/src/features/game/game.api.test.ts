@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import { getAnonymousUserId } from '../../api/identity.js';
 import { createGuess, getGameState, getPriceState } from './game.api.js';
+import { createPriceStateQueryOptions } from './game.queries.js';
 
 type FetchCall = {
   url: string;
@@ -92,4 +93,9 @@ test('createGuess submits direction and priceSnapshotId without a raw price', as
     direction: 'UP',
     priceSnapshotId: 'snapshot-token',
   });
+});
+
+test('price query can be disabled while a guess is active', () => {
+  assert.equal(createPriceStateQueryOptions(false).enabled, false);
+  assert.equal(createPriceStateQueryOptions(true).enabled, true);
 });

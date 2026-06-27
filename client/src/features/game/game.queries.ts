@@ -80,16 +80,18 @@ const createGameStateQueryOptions = (userId: string) =>
     },
   });
 
-const createPriceStateQueryOptions = () =>
+const createPriceStateQueryOptions = (enabled: boolean) =>
   queryOptions({
     queryKey: gameKeys.price(),
-    queryFn: getPriceState,
+    queryFn: ({ signal }) => getPriceState(signal),
+    enabled,
   });
 
 const useGameStateQuery = (userId = getAnonymousUserId()) =>
   useQuery(createGameStateQueryOptions(userId));
 
-const usePriceStateQuery = () => useQuery(createPriceStateQueryOptions());
+const usePriceStateQuery = (enabled: boolean) =>
+  useQuery(createPriceStateQueryOptions(enabled));
 
 const useCreateGuessMutation = (userId: string) => {
   const queryClient = useQueryClient();
@@ -105,6 +107,7 @@ const useCreateGuessMutation = (userId: string) => {
     }) => createGuess(direction, priceSnapshotId),
     onMutate: async ({ direction }) => {
       await queryClient.cancelQueries({ queryKey: gameKeys.state(userId) });
+      await queryClient.cancelQueries({ queryKey: gameKeys.price() });
 
       const previousState = queryClient.getQueryData<GameStateResponse>(
         gameKeys.state(userId),

@@ -67,7 +67,9 @@ export type CreateGuessRequest = {
 
 export type CreateGuessResponse = GameStateResponse;
 
-export type ResolveGuessResponse = GameStateResponse & PriceStateResponse;
+export type ResolveGuessResponse = GameStateResponse & {
+  latestPrice?: PriceSnapshot;
+};
 
 export type ApiErrorResponse = {
   error: {
