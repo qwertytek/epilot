@@ -11,7 +11,13 @@
 }
 
 .game-price-panel {
+  position: relative;
+  overflow: hidden;
   background: var(--color-brand-soft);
+}
+
+.game-price-panel.is-stale > p {
+  opacity: 0.35;
 }
 
 .game-guess-panel {
@@ -190,6 +196,52 @@
   color: var(--color-brand-navy);
   content: '.';
   animation: price-loading-dots 1.2s steps(1, end) infinite;
+}
+
+.price-stale-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(222 226 230 / 70%);
+  backdrop-filter: grayscale(1);
+}
+
+.price-refresh-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 5rem;
+  height: 5rem;
+  border: 2px solid rgb(255 255 255 / 82%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 88%);
+  color: var(--color-brand-navy);
+  cursor: pointer;
+  box-shadow: 0 1rem 2rem rgb(7 26 44 / 22%);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.price-refresh-button:hover {
+  transform: scale(1.04);
+}
+
+.price-refresh-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.price-refresh-button:focus-visible {
+  outline: 3px solid white;
+  outline-offset: 4px;
+}
+
+.price-refresh-icon {
+  font-size: 3.25rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
 @keyframes skeleton-shimmer {

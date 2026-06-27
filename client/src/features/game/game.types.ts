@@ -7,6 +7,9 @@ export type GameHeaderProps = {
 };
 
 export type PriceDisplayProps = {
+  isRefreshing?: boolean;
+  isStale?: boolean;
+  onRefresh: () => void;
   price: string | null;
   updatedAt: string | null;
 };

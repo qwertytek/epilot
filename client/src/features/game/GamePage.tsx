@@ -36,6 +36,7 @@ const GamePage = () => {
   const gameState = gameStateQuery.data ?? null;
   const latestPrice = priceStateQuery.data?.latestPrice ?? null;
   const isGameStateKnown = gameStateQuery.data !== undefined;
+  const isPriceStale = priceStateQuery.isStale && latestPrice !== null;
 
   const feedback = useMemo(
     () => (gameState ? getFeedbackMessage(gameState.feedback) : null),
@@ -62,6 +63,7 @@ const GamePage = () => {
       gameState === null ||
       latestPrice === null ||
       activeGuess !== null ||
+      isPriceStale ||
       isBusy
     ) {
       return;
@@ -84,6 +86,11 @@ const GamePage = () => {
 
           <div className="game-content-grid mt-9 border-t border-brand-border pt-8">
             <PriceDisplay
+              isRefreshing={priceStateQuery.isFetching}
+              isStale={isPriceStale}
+              onRefresh={() => {
+                void priceStateQuery.refetch();
+              }}
               price={
                 latestPrice ? formatCurrencyUsd(latestPrice.priceUsd) : null
               }
@@ -108,7 +115,12 @@ const GamePage = () => {
               </div>
             ) : (
               <GuessControls
-                disabled={gameState === null || latestPrice === null || isBusy}
+                disabled={
+                  gameState === null ||
+                  latestPrice === null ||
+                  isPriceStale ||
+                  isBusy
+                }
                 label="Which way will it move?"
                 onGuess={handleGuess}
                 pendingDirection={pendingDirection}
@@ -123,7 +135,7 @@ const GamePage = () => {
             isCheckingResults={isCheckingResults}
             isGameStateFetching={gameStateQuery.isFetching}
             isPriceFetching={priceStateQuery.isFetching}
-            isPriceStale={priceStateQuery.isStale}
+            isPriceStale={isPriceStale}
           />
         </div>
       </main>
