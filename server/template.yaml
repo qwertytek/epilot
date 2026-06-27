@@ -52,7 +52,7 @@ Resources:
       CodeUri: .
       Handler: handler.handler
       Runtime: nodejs24.x
-      MemorySize: 128
+      MemorySize: 256
       Timeout: 10
       Environment:
         Variables:
