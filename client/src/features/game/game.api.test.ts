@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import { ApiError } from '../../api/http.js';
 import { getAnonymousUserId } from '../../api/identity.js';
+import { getErrorMessage } from '../../shared/utils/errors.js';
+import { getBehindTheScenesFeedback } from './dev-warnings/feedback.js';
 import { createGuess, getGameState, getPriceState } from './game.api.js';
 import {
   createGameStateQueryOptions,
@@ -16,6 +19,17 @@ type FetchCall = {
   url: string;
   init: RequestInit;
 };
+
+const createApiError = (
+  code: ConstructorParameters<typeof ApiError>[1]['error']['code'],
+  message: string,
+) =>
+  new ApiError(503, {
+    error: {
+      code,
+      message,
+    },
+  });
 
 const installBrowserMocks = () => {
   const storage = new Map<string, string>();
@@ -179,4 +193,36 @@ test('price query stays fresh until the signed snapshot expires', () => {
   });
 
   assert.ok(typeof freshMs === 'number' && freshMs > 25_000);
+});
+
+test('price provider outage uses generic user-facing copy', () => {
+  const error = createApiError(
+    'PRICE_PROVIDER_UNAVAILABLE',
+    'The price provider is unavailable.',
+  );
+
+  assert.equal(
+    getErrorMessage(error),
+    'Something went wrong. Please try again.',
+  );
+});
+
+test('price provider outage appears in behind-the-scenes feedback', () => {
+  const error = createApiError(
+    'PRICE_PROVIDER_UNAVAILABLE',
+    'The price provider is unavailable.',
+  );
+
+  assert.deepEqual(
+    getBehindTheScenesFeedback({
+      error,
+      hasGameState: false,
+      hasLatestPrice: false,
+      isCheckingResults: false,
+      isGameStateFetching: false,
+      isPriceFetching: false,
+      isPriceStale: false,
+    }),
+    ['Price provider unavailable; showing a generic error to the user.'],
+  );
 });
