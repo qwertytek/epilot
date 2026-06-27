@@ -26,6 +26,25 @@
   min-height: 3.5rem;
 }
 
+.game-feedback-region {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  min-height: 2.875rem;
+}
+
+.game-feedback-notification {
+  transform-origin: center top;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition:
+    opacity 260ms ease,
+    transform 260ms ease;
+}
+
+.game-feedback-notification.is-exiting {
+  opacity: 0;
+  transform: translateY(-0.375rem) scale(0.98);
+}
+
 .behind-scenes-toggle {
   display: flex;
   align-items: center;
@@ -160,6 +179,12 @@
   66%,
   100% {
     content: '...';
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-feedback-notification {
+    transition: none;
   }
 }
 
