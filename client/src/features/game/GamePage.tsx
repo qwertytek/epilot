@@ -35,8 +35,15 @@ const GamePage = () => {
 
   const gameState = gameStateQuery.data ?? null;
   const latestPrice = priceStateQuery.data?.latestPrice ?? null;
+  const displayedPrice = activeGuess
+    ? {
+        priceUsd: activeGuess.startPriceUsd,
+        observedAt: activeGuess.createdAt,
+      }
+    : latestPrice;
   const isGameStateKnown = gameStateQuery.data !== undefined;
-  const isPriceStale = priceStateQuery.isStale && latestPrice !== null;
+  const isPriceStale =
+    activeGuess === null && priceStateQuery.isStale && latestPrice !== null;
 
   const feedback = useMemo(
     () => (gameState ? getFeedbackMessage(gameState.feedback) : null),
@@ -86,16 +93,20 @@ const GamePage = () => {
 
           <div className="game-content-grid mt-9 border-t border-brand-border pt-8">
             <PriceDisplay
-              isRefreshing={priceStateQuery.isFetching}
+              isRefreshing={activeGuess === null && priceStateQuery.isFetching}
               isStale={isPriceStale}
               onRefresh={() => {
                 void priceStateQuery.refetch();
               }}
               price={
-                latestPrice ? formatCurrencyUsd(latestPrice.priceUsd) : null
+                displayedPrice
+                  ? formatCurrencyUsd(displayedPrice.priceUsd)
+                  : null
               }
               updatedAt={
-                latestPrice ? formatDateTime(latestPrice.observedAt) : null
+                displayedPrice
+                  ? formatDateTime(displayedPrice.observedAt)
+                  : null
               }
             />
 
