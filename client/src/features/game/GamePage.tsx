@@ -113,7 +113,7 @@ const GamePage = () => {
             {!isGameStateKnown ? (
               <GuessStateSkeleton />
             ) : activeGuess ? (
-              <div className="grid gap-4">
+              <div className="game-guess-state grid gap-4">
                 <PendingGuess
                   direction={activeGuess.direction}
                   eligibleAt={formatDateTime(activeGuess.eligibleAt)}

@@ -32,6 +32,11 @@
   min-height: 3.5rem;
 }
 
+.game-guess-state {
+  align-content: center;
+  min-height: 13rem;
+}
+
 .game-feedback-region {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
   min-height: 2.875rem;
