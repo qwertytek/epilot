@@ -8,7 +8,7 @@ Parameters:
     Description: DynamoDB table name for player state.
   FrontendOrigin:
     Type: String
-    Default: http://localhost:5173
+    Default: https://main.d1cgb3966fmmq6.amplifyapp.com
     Description: Deployed browser origin allowed to call the game API.
   SnapshotSigningSecret:
     Type: String
