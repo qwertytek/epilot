@@ -1,5 +1,5 @@
 export const defaultSnapshotValidityMs = 10_000;
-export const defaultProviderCacheTtlMs = 15_000;
+export const defaultProviderCacheTtlMs = 9_000;
 export const defaultGuessEligibilityMs = 60_000;
 export const defaultCoinGeckoRequestTimeoutMs = 5_000;
 export const defaultCoinGeckoPriceUrl =

@@ -40,14 +40,13 @@ response.
 
 The backend also applies `PROVIDER_CACHE_TTL_MS` around the upstream CoinGecko
 provider. Repeated `GET /price` calls can reuse the cached provider value for
-fifteen seconds by default, which limits third-party API traffic even though the
-client polls every ten seconds. Snapshot expiry is based on the provider
-observation time, so lowering `SNAPSHOT_VALIDITY_MS` below
-`PROVIDER_CACHE_TTL_MS` can make cached snapshot tokens expire before the
-provider cache refreshes. Cached prices that are stale, expired, or returned only
-because the provider is unavailable are display-only: `GET /price` includes the
-price but returns `canCreateGuess: false`. If the provider is unavailable and no
-cached price exists, `GET /price` returns `price: null` and
+nine seconds by default, just below the client's ten-second polling interval.
+Snapshot expiry is based on the provider observation time, so setting
+`PROVIDER_CACHE_TTL_MS` at or above the client poll interval can make every other
+poll reuse an expired snapshot. Cached prices that are stale, expired, or
+returned only because the provider is unavailable are display-only: `GET /price`
+includes the price but returns `canCreateGuess: false`. If the provider is
+unavailable and no cached price exists, `GET /price` returns `price: null` and
 `canCreateGuess: false`, so the UI keeps betting disabled until a later refresh
 succeeds.
 
@@ -274,7 +273,8 @@ For production, also review these Lambda environment values in
   CoinGecko's simple price API.
 - `COINGECKO_REQUEST_TIMEOUT_MS`: request timeout for the price provider.
 - `PROVIDER_CACHE_TTL_MS`: backend price cache TTL. This limits third-party API
-  calls while still serving the latest price available to the backend.
+  calls while still serving the latest price available to the backend. Keep it
+  below the client polling interval and snapshot validity window.
 - `SNAPSHOT_VALIDITY_MS`: how long a signed price snapshot token can be used to
   create a guess. The client does not use this value for refresh timing.
 - `GUESS_ELIGIBILITY_MS`: the minimum guess duration. The exercise value is

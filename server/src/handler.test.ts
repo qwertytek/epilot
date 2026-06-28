@@ -11,6 +11,10 @@ import type {
 } from '@epilot/api-contract';
 
 import { createHandler } from './handler.js';
+import {
+  defaultProviderCacheTtlMs,
+  defaultSnapshotValidityMs,
+} from './config.js';
 
 type TestEvent = Parameters<ReturnType<typeof createHandler>>[0];
 
@@ -99,6 +103,11 @@ test('SAM template exposes the price endpoint', () => {
     /Path:\s*\/price\s+Method:\s*get/,
     'GET /price must be registered in server/template.yaml for local CORS preflight and API Gateway routing',
   );
+});
+
+test('default provider cache expires before snapshots become stale', () => {
+  assert.ok(defaultProviderCacheTtlMs < defaultSnapshotValidityMs);
+  assert.match(template, /PROVIDER_CACHE_TTL_MS:\s*'9000'/);
 });
 
 test('GET /state without x-user-id returns 401 MISSING_USER_ID', async () => {
