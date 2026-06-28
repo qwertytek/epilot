@@ -197,7 +197,7 @@ Recommended guided deploy answers:
 Stack Name: epilot-btc-game
 AWS Region: eu-central-1
 Parameter PlayerTableName: epilot-btc-guess-players
-Parameter FrontendOrigin: http://localhost:5173
+Parameter FrontendOrigin: https://main.d1cgb3966fmmq6.amplifyapp.com
 Parameter SnapshotSigningSecret: <paste generated secret>
 Parameter DynamoDbEndpoint: <leave blank>
 Confirm changes before deploy: y
@@ -253,9 +253,11 @@ The deployment template also exposes these production-facing parameters:
   display it in plain text in normal stack views.
 - `PlayerTableName`: the DynamoDB table name for player state.
 
-`FrontendOrigin` is used for both `GameApi.CorsConfiguration.AllowOrigins` and
-the Lambda `CORS_ALLOWED_ORIGINS` environment variable. `SnapshotSigningSecret`
-is used for the Lambda `SNAPSHOT_SIGNING_SECRET` environment variable.
+`FrontendOrigin` is used with `http://localhost:5173` for both
+`GameApi.CorsConfiguration.AllowOrigins` and the Lambda
+`CORS_ALLOWED_ORIGINS` environment variable, so the deployed API can be called
+from the hosted frontend and the local dev frontend. `SnapshotSigningSecret` is
+used for the Lambda `SNAPSHOT_SIGNING_SECRET` environment variable.
 
 For production, also review these Lambda environment values in
 `server/template.yaml`:
@@ -278,9 +280,10 @@ FrontendOrigin=http://localhost:5173
 ```
 
 After the frontend is deployed, redeploy the backend with `FrontendOrigin` set
-to the real frontend URL so browser CORS checks allow API calls from the hosted
-site. SAM prints the API Gateway URL through the `GameApiUrl` stack output. Use
-that URL as the frontend API base URL.
+to the real frontend origin, such as
+`https://main.d1cgb3966fmmq6.amplifyapp.com`, so browser CORS checks allow API
+calls from the hosted site. SAM prints the API Gateway URL through the
+`GameApiUrl` stack output. Use that URL as the frontend API base URL.
 
 #### Production note: secret management
 

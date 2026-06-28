@@ -7,7 +7,7 @@ resolve_s3 = true
 s3_prefix = "epilot-btc-game"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
-parameter_overrides = "PlayerTableName=\"epilot-btc-guess-players\" FrontendOrigin=\"http://localhost:5173\" DynamoDbEndpoint=\"\""
+parameter_overrides = "PlayerTableName=\"epilot-btc-guess-players\" FrontendOrigin=\"https://main.d1cgb3966fmmq6.amplifyapp.com\" DynamoDbEndpoint=\"\""
 image_repositories = []
 
 [default.global.parameters]
