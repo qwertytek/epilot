@@ -8,7 +8,7 @@ import type {
   useCreateGuessMutation,
   useGameStateQuery,
   usePriceStateQuery,
-} from '../../game.queries.js';
+} from '../../model/game.queries';
 
 export const useGuessSubmission = ({
   activeGuess,

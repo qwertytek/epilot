@@ -1,4 +1,4 @@
-import { ApiError } from '../../api/http.js';
+import { ApiError } from '../../api/http';
 
 const getErrorMessage = (
   error: unknown,

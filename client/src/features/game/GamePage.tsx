@@ -3,7 +3,7 @@ import { GameWarnings } from './components/GameWarnings.js';
 import { GuessPanel } from './components/GuessPanel.js';
 import { PriceDisplay } from './components/PriceDisplay.js';
 import { DevWarnings } from './dev-warnings/DevWarnings.js';
-import { useGamePageState } from './hooks/useGamePageState/index.js';
+import { useGamePageState } from './state/index.js';
 
 import './game.css';
 

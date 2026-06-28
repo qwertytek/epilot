@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import type { GameStateResponse } from '@epilot/api-contract';
 
-import { useGameWarnings } from '../../../../hooks/useGameWarnings.js';
-import { getFeedbackMessage } from '../../game.feedback.js';
+import { useGameWarnings } from '../../../../hooks/useGameWarnings';
+import { getFeedbackMessage } from '../../model/game.feedback';
 
 type ErrorSource = {
   error: unknown;

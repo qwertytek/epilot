@@ -1,4 +1,4 @@
-import { usePriceStateQuery } from '../../game.queries.js';
+import { usePriceStateQuery } from '../../model/game.queries.js';
 
 export const useGamePriceState = () => {
   const priceStateQuery = usePriceStateQuery(true);

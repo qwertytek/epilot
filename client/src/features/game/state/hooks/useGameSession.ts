@@ -2,7 +2,7 @@ import { getAnonymousUserId } from '../../../../api/identity.js';
 import {
   useCreateGuessMutation,
   useGameStateQuery,
-} from '../../game.queries.js';
+} from '../../model/game.queries';
 
 export const useGameSession = () => {
   const userId = getAnonymousUserId();

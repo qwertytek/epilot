@@ -1,6 +1,6 @@
 import { type CSSProperties, useEffect, useMemo, useState } from 'react';
 
-import type { PriceDisplayProps } from '../game.types';
+import type { PriceDisplayProps } from '../model/game.types';
 
 const formatElapsedTime = (elapsedMs: number) => {
   const elapsedSeconds = Math.max(0, Math.floor(elapsedMs / 1_000));

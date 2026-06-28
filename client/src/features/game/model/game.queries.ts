@@ -13,9 +13,9 @@ import type {
 } from '@epilot/api-contract';
 
 import { createGuess, getGameState, getPriceState } from './game.api.js';
-import { getAnonymousUserId } from '../../api/identity.js';
-import { ApiError } from '../../api/http.js';
-import { pricePollIntervalMs } from '../../shared/utils/game.price.js';
+import { getAnonymousUserId } from '../../../api/identity.js';
+import { ApiError } from '../../../api/http.js';
+import { pricePollIntervalMs } from '../../../shared/utils/game.price.js';
 
 const optimisticGuessEligibilityMs = 60_000;
 const gameKeys = {

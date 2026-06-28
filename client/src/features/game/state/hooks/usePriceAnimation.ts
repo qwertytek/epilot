@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ActiveGuess, PriceSnapshot } from '@epilot/api-contract';
 
-import { formatCurrencyUsd } from '../../../shared/utils/formatters.js';
-import { getPriceAnimationTone } from '../../../shared/utils/game.price.js';
+import { formatCurrencyUsd } from '../../../../shared/utils/formatters.js';
+import { getPriceAnimationTone } from '../../../../shared/utils/game.price.js';
 
 type PriceAnimation =
   | {

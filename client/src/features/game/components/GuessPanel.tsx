@@ -1,9 +1,9 @@
 import type { ActiveGuess, GuessDirection } from '@epilot/api-contract';
 
-import { formatDateTime } from '../../../shared/utils/formatters.js';
-import { GuessControls } from './GuessControls.js';
-import { GuessStateSkeleton } from './GuessStateSkeleton.js';
-import { PendingGuess } from './PendingGuess.js';
+import { formatDateTime } from '../../../shared/utils/formatters';
+import { GuessControls } from './GuessControls';
+import { GuessStateSkeleton } from './GuessStateSkeleton';
+import { PendingGuess } from './PendingGuess';
 
 type GuessPanelProps = {
   activeGuess: ActiveGuess | null;

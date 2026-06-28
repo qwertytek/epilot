@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { ApiError } from '../../api/http.js';
-import { getAnonymousUserId } from '../../api/identity.js';
-import { getErrorMessage } from '../../shared/utils/errors.js';
-import { pricePollIntervalMs } from '../../shared/utils/game.price.js';
-import { getBehindTheScenesFeedback } from './dev-warnings/feedback.js';
-import { createGuess, getGameState, getPriceState } from './game.api.js';
-import { createPriceStateQueryOptions } from './game.queries.js';
+import { ApiError } from '../../../api/http';
+import { getAnonymousUserId } from '../../../api/identity';
+import { getErrorMessage } from '../../../shared/utils/errors';
+import { pricePollIntervalMs } from '../../../shared/utils/game.price';
+import { getBehindTheScenesFeedback } from '../dev-warnings/feedback';
+import { createGuess, getGameState, getPriceState } from './game.api';
+import { createPriceStateQueryOptions } from './game.queries';
 
 type FetchCall = {
   url: string;
