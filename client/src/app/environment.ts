@@ -1,15 +1,14 @@
-type FrontendEnv = {
-  MODE?: string;
-  VITE_API_BASE_LIVE?: string;
-  VITE_API_BASE_LOCAL?: string;
-  VITE_APP_ENV?: string;
-};
-
-const env = (import.meta as ImportMeta & { env?: FrontendEnv }).env ?? {};
-
-const frontendMode = env?.MODE ?? 'development';
-const appEnvironment = env?.VITE_APP_ENV ?? 'development';
+const frontendMode = import.meta.env?.MODE ?? 'development';
+const apiBaseLiveUrl = import.meta.env?.VITE_API_BASE_LIVE;
+const apiBaseLocalUrl = import.meta.env?.VITE_API_BASE_LOCAL;
+const appEnvironment = import.meta.env?.VITE_APP_ENV ?? 'development';
 const isProductionApp = appEnvironment === 'production';
 const isDevelopmentApp = !isProductionApp;
 
-export { appEnvironment, env, frontendMode, isDevelopmentApp };
+export {
+  apiBaseLiveUrl,
+  apiBaseLocalUrl,
+  appEnvironment,
+  frontendMode,
+  isDevelopmentApp,
+};

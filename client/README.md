@@ -21,8 +21,8 @@ VITE_API_BASE_LIVE=https://your-api-id.execute-api.your-region.amazonaws.com
 VITE_APP_ENV=development
 ```
 
-No mode argument uses `VITE_API_BASE_LOCAL`. Passing `--mode live` uses
-`VITE_API_BASE_LIVE`.
+The dev server uses `VITE_API_BASE_LOCAL` by default. Passing `--mode live` or
+building for production uses `VITE_API_BASE_LIVE`.
 
 `VITE_APP_ENV` controls the product UI environment. It defaults to
 `development`, including when the client runs with `--mode live` or is hosted
@@ -45,7 +45,7 @@ pnpm --dir client start --mode live
 ```bash
 pnpm --dir client start                 # start with the local API
 pnpm --dir client start --mode live     # start with the deployed API
-pnpm --dir client build                 # build with the local API
+pnpm --dir client build                 # build with the deployed API
 pnpm --dir client build --mode live     # build with the deployed API
 pnpm --dir client test                  # type-check and run client node:test tests
 pnpm --dir client preview               # serve the production build locally

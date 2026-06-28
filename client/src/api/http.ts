@@ -1,16 +1,22 @@
 import type { ApiErrorResponse } from '@epilot/api-contract';
 
-import { env, frontendMode } from '../app/environment.js';
+import {
+  apiBaseLiveUrl,
+  apiBaseLocalUrl,
+  frontendMode,
+} from '../app/environment.js';
 import { getAnonymousUserId } from './identity.js';
 
-const apiBaseUrl =
-  frontendMode === 'live'
-    ? env.VITE_API_BASE_LIVE
-    : (env.VITE_API_BASE_LOCAL ?? 'http://127.0.0.1:3000');
+const configuredApiBaseUrl =
+  frontendMode === 'live' || frontendMode === 'production'
+    ? apiBaseLiveUrl
+    : (apiBaseLocalUrl ?? 'http://127.0.0.1:3000');
 
-if (apiBaseUrl === undefined || apiBaseUrl.trim() === '') {
+if (configuredApiBaseUrl === undefined || configuredApiBaseUrl.trim() === '') {
   throw new Error('Missing API base URL for the selected frontend target.');
 }
+
+const apiBaseUrl = configuredApiBaseUrl.trim().replace(/\/+$/, '');
 
 class ApiError extends Error {
   constructor(

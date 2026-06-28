@@ -311,16 +311,16 @@ configuration and secret lifecycle management.
 
 ### Frontend
 
-Build the frontend with the deployed API URL:
+Build the frontend with the deployed API URL from an environment variable:
 
 ```bash
-# edit VITE_API_BASE_LIVE in client/.env with the GameApiUrl from SAM
-pnpm --dir client build --mode live
+VITE_API_BASE_LIVE=https://your-api-id.execute-api.your-region.amazonaws.com pnpm --dir client build
 ```
 
 Deploy the generated `client/dist` directory to the static host of your choice.
-In hosted build environments, configure `VITE_API_BASE_LIVE` as a build
-environment variable.
+In hosted build environments such as AWS Amplify, configure
+`VITE_API_BASE_LIVE` as a build environment variable. The production build fails
+if this variable is missing or still uses the placeholder API URL.
 
 After the frontend is live, verify the deployed app by:
 
