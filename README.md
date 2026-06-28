@@ -2,6 +2,11 @@
 
 Bitcoin price-direction game built as a TypeScript pnpm workspace.
 
+## Deployed Clients
+
+- Main: https://main.d1cgb3966fmmq6.amplifyapp.com/
+- Dev: https://dev.d1cgb3966fmmq6.amplifyapp.com/
+
 Players get the latest BTC/USD price, predict whether the next eligible price
 check will be higher or lower, then receive a score update after the guess
 window expires. The browser keeps an anonymous user ID in `localStorage` and
