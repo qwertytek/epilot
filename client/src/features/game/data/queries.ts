@@ -21,7 +21,6 @@ import { getAnonymousUserId } from '#src/api/identity';
 import { ApiError } from '#src/api/http';
 import { pricePollIntervalMs } from '#src/shared/constants/pricePoll';
 
-const optimisticGuessEligibilityMs = 60_000;
 const gameKeys = {
   all: ['game'] as const,
   players: () => [...gameKeys.all, 'players'] as const,
@@ -128,7 +127,7 @@ const useCreateGuessMutation = (userId: string) => {
       direction: GuessDirection;
       priceSnapshotId: string;
     }) => createGuess(direction, priceSnapshotId),
-    onMutate: async ({ direction }) => {
+    onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: gameKeys.state(userId) });
       await queryClient.cancelQueries({ queryKey: gameKeys.price() });
 
@@ -138,35 +137,6 @@ const useCreateGuessMutation = (userId: string) => {
       const previousPriceState = queryClient.getQueryData<PriceStateResponse>(
         gameKeys.price(),
       );
-
-      if (
-        previousState?.activeGuess === null &&
-        previousPriceState?.price !== null &&
-        previousPriceState?.canCreateGuess === true
-      ) {
-        const createdAt = new Date();
-
-        queryClient.setQueryData<GameStateResponse>(gameKeys.state(userId), {
-          ...previousState,
-          activeGuess: {
-            id: 'optimistic-guess',
-            direction,
-            startPriceUsd: previousPriceState.price.priceUsd,
-            createdAt: createdAt.toISOString(),
-            eligibleAt: new Date(
-              createdAt.getTime() + optimisticGuessEligibilityMs,
-            ).toISOString(),
-          },
-          lastBet: {
-            direction,
-            priceUsd: previousPriceState.price.priceUsd,
-            placedAt: createdAt.toISOString(),
-          },
-          feedback: {
-            type: 'NONE',
-          },
-        });
-      }
 
       return { previousState, previousPriceState };
     },
