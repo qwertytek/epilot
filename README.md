@@ -27,15 +27,11 @@ game view marks it stale.
 
 When a displayed price expires, the client automatically calls `GET /price` for
 a replacement snapshot, including while a pending guess is waiting to become
-eligible for resolution. Refreshes during an active guess do not count toward
-the capped refresh allowance, and the manual refresh button is hidden until the
-guess has ended. Placing a guess resets the allowance; counting starts again
-after the guess resolves. Automatic expiry refreshes outside an active guess are
-capped at five calls for the initial page session. Once that allowance is
-exhausted, the user must refresh the price manually or reload the page. After a
-refresh path is reached, the client stores the reduced allowance in
-`sessionStorage`, so the refreshed session receives three automatic expiry
-refreshes.
+eligible for resolution. Refreshes during an active guess do not spend the
+manual-session allowance, and the manual refresh button is hidden until the
+guess has ended. Outside an active guess, automatic expiry refreshes are allowed
+for one minute at a time. Once that window expires, the user must refresh the
+price manually; clicking the refresh button resets the one-minute allowance.
 
 The backend still applies `PROVIDER_CACHE_TTL_MS` around the upstream CoinGecko
 provider. That means repeated `GET /price` calls can return a signed snapshot

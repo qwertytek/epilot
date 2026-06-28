@@ -68,11 +68,11 @@ The client renders a responsive game view connected to the backend API. It curre
 The client API layer uses the shared `@epilot/api-contract` package for request and response types. TanStack Query owns game-state fetching, mutation cache updates, retry behavior, stale-state handling, and background refetches.
 
 Price snapshots are refreshed automatically when they expire, including during a
-pending guess. Active-guess refreshes do not spend the capped refresh allowance,
+pending guess. Active-guess refreshes do not spend the manual-session allowance,
 and the manual refresh button is hidden until the guess ends. Outside an active
-guess, automatic expiry refreshes are capped at five for the initial session and
-three after the user refreshes the price or reloads into the reduced-refresh
-session. The full strategy is documented in the root README.
+guess, automatic expiry refreshes are allowed for one minute at a time; clicking
+the refresh button resets that one-minute window. The full strategy is
+documented in the root README.
 
 ## Structure
 
