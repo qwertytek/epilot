@@ -98,7 +98,9 @@ const GamePage = () => {
   const latestPrice = priceStateQuery.data?.latestPrice ?? null;
   const displayPrice = priceStateQuery.data?.displayPrice ?? latestPrice;
   const bettablePrice =
-    resolvedPrice && !isPriceExpired(resolvedPrice) ? resolvedPrice : latestPrice;
+    resolvedPrice && !isPriceExpired(resolvedPrice)
+      ? resolvedPrice
+      : latestPrice;
   const currentPrice =
     resolvedPrice && (!isPriceExpired(resolvedPrice) || displayPrice === null)
       ? resolvedPrice

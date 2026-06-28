@@ -118,8 +118,7 @@ export const createCachedPriceProvider = (
       return undefined;
     }
 
-    const retryAfterMs =
-      lastFailureMs + failureCooldownMs - now().getTime();
+    const retryAfterMs = lastFailureMs + failureCooldownMs - now().getTime();
 
     return retryAfterMs > 0 ? retryAfterMs : undefined;
   };

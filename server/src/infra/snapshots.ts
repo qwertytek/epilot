@@ -90,53 +90,52 @@ export const parseSnapshotToken = (
   }
 };
 
-export const createPriceSnapshotFactory =
-  (
-    getPrice: PriceProvider,
-    now: () => Date,
-    snapshotValidityMs: number,
-    snapshotSigningSecret: string,
-  ): PriceSnapshotFactory => {
-    const createSnapshot = (priceUsd: number, fetchedAtMs?: number) => {
-      const observedAt =
-        fetchedAtMs === undefined ? now() : new Date(fetchedAtMs);
-      const expiresAt = new Date(observedAt.getTime() + snapshotValidityMs);
-      const payload: SnapshotPayload = {
-        priceUsd,
-        observedAt: observedAt.toISOString(),
-        expiresAt: expiresAt.toISOString(),
-      };
-
-      return {
-        ...payload,
-        priceSnapshotId: createSnapshotToken(payload, snapshotSigningSecret),
-      };
+export const createPriceSnapshotFactory = (
+  getPrice: PriceProvider,
+  now: () => Date,
+  snapshotValidityMs: number,
+  snapshotSigningSecret: string,
+): PriceSnapshotFactory => {
+  const createSnapshot = (priceUsd: number, fetchedAtMs?: number) => {
+    const observedAt =
+      fetchedAtMs === undefined ? now() : new Date(fetchedAtMs);
+    const expiresAt = new Date(observedAt.getTime() + snapshotValidityMs);
+    const payload: SnapshotPayload = {
+      priceUsd,
+      observedAt: observedAt.toISOString(),
+      expiresAt: expiresAt.toISOString(),
     };
 
-    const createPriceSnapshot: PriceSnapshotFactory = async (
-      options?: PriceProviderOptions,
-    ): Promise<PriceSnapshot> => {
-      const priceUsd = await getPrice({
-        ...options,
-        maxAgeMs:
-          options?.allowStale === false ? snapshotValidityMs : options?.maxAgeMs,
-      });
-      const lastFetchedAtMs = getPrice.getLastFetchedAtMs?.();
-
-      return createSnapshot(priceUsd, lastFetchedAtMs);
+    return {
+      ...payload,
+      priceSnapshotId: createSnapshotToken(payload, snapshotSigningSecret),
     };
-
-    createPriceSnapshot.getCachedSnapshot = () => {
-      const cachedPrice = getPrice.getCachedPrice?.();
-
-      if (cachedPrice === undefined) {
-        return undefined;
-      }
-
-      return createSnapshot(cachedPrice.priceUsd, cachedPrice.fetchedAtMs);
-    };
-
-    createPriceSnapshot.getRetryAfterMs = () => getPrice.getRetryAfterMs?.();
-
-    return createPriceSnapshot;
   };
+
+  const createPriceSnapshot: PriceSnapshotFactory = async (
+    options?: PriceProviderOptions,
+  ): Promise<PriceSnapshot> => {
+    const priceUsd = await getPrice({
+      ...options,
+      maxAgeMs:
+        options?.allowStale === false ? snapshotValidityMs : options?.maxAgeMs,
+    });
+    const lastFetchedAtMs = getPrice.getLastFetchedAtMs?.();
+
+    return createSnapshot(priceUsd, lastFetchedAtMs);
+  };
+
+  createPriceSnapshot.getCachedSnapshot = () => {
+    const cachedPrice = getPrice.getCachedPrice?.();
+
+    if (cachedPrice === undefined) {
+      return undefined;
+    }
+
+    return createSnapshot(cachedPrice.priceUsd, cachedPrice.fetchedAtMs);
+  };
+
+  createPriceSnapshot.getRetryAfterMs = () => getPrice.getRetryAfterMs?.();
+
+  return createPriceSnapshot;
+};
