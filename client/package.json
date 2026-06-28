@@ -5,8 +5,8 @@
   "type": "module",
   "imports": {
     "#src/*": {
-      "development": "./src/*",
-      "default": "./dist-test/*"
+      "types": "./src/*.ts",
+      "default": "./dist-test/*.js"
     }
   },
   "scripts": {

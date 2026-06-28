@@ -56,6 +56,7 @@ const createTestHandler = (
     snapshotSigningSecret: 'test-secret',
     providerCacheTtlMs: options.providerCacheTtlMs ?? 0,
     snapshotValidityMs: options.snapshotValidityMs,
+    onPriceProviderError: () => {},
     priceProvider: async () => {
       const price = prices[Math.min(calls, prices.length - 1)];
       calls += 1;
@@ -663,6 +664,7 @@ test('CoinGecko failure preserves player state and returns 503 PRICE_PROVIDER_UN
     now: () => new Date(baseTimeMs + 60_000),
     snapshotSigningSecret: 'test-secret',
     providerCacheTtlMs: 0,
+    onPriceProviderError: () => {},
     players: new Map([
       [
         'user-1',

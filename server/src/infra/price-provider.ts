@@ -33,6 +33,9 @@ export const createCachedPriceProvider = (
   priceProvider: PriceProvider,
   now: () => Date,
   cacheTtlMs: number,
+  onPriceProviderError: (error: unknown) => void = (error) => {
+    console.warn('Price provider request failed.', error);
+  },
 ): PriceProvider => {
   let cachedPrice:
     | {
@@ -85,7 +88,7 @@ export const createCachedPriceProvider = (
         throw error;
       }
 
-      console.warn('Price provider request failed.', error);
+      onPriceProviderError(error);
       throw new ApiError(503, 'PRICE_PROVIDER_UNAVAILABLE');
     }
   };

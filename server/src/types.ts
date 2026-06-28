@@ -37,6 +37,7 @@ export type PriceSnapshotFactory = (() => Promise<PriceSnapshot>) & {
 export type HandlerOptions = {
   now?: () => Date;
   priceProvider?: PriceProvider;
+  onPriceProviderError?: (error: unknown) => void;
   coinGeckoPriceUrl?: string;
   corsAllowedOrigins?: string[];
   snapshotSigningSecret?: string;

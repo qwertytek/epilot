@@ -6,7 +6,7 @@ import {
   frontendMode,
 } from '#src/app/environment';
 import { defaultLocalApiBaseUrl } from '#src/shared/constants/api';
-import { getAnonymousUserId } from './identity';
+import { getAnonymousUserId } from '#src/api/identity';
 
 const configuredApiBaseUrl =
   frontendMode === 'live' || frontendMode === 'production'

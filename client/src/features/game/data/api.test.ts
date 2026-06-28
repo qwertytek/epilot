@@ -6,9 +6,13 @@ import { getAnonymousUserId } from '#src/api/identity';
 import { ApiError } from '#src/api/http';
 import { getErrorMessage } from '#src/shared/utils/errors';
 import { pricePollIntervalMs } from '#src/shared/constants/pricePoll';
-import { getBehindTheScenesFeedback } from '../dev-warnings/feedback';
-import { createGuess, getGameState, getPriceState } from './api';
-import { createPriceStateQueryOptions } from './queries';
+import { getBehindTheScenesFeedback } from '#src/features/game/dev-warnings/feedback';
+import {
+  createGuess,
+  getGameState,
+  getPriceState,
+} from '#src/features/game/data/api';
+import { createPriceStateQueryOptions } from '#src/features/game/data/queries';
 
 type FetchCall = {
   url: string;

@@ -12,7 +12,11 @@ import type {
   PriceStateResponse,
 } from '@epilot/api-contract';
 
-import { createGuess, getGameState, getPriceState } from './api';
+import {
+  createGuess,
+  getGameState,
+  getPriceState,
+} from '#src/features/game/data/api';
 import { getAnonymousUserId } from '#src/api/identity';
 import { ApiError } from '#src/api/http';
 import { pricePollIntervalMs } from '#src/shared/constants/pricePoll';

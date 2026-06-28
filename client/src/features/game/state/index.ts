@@ -1,10 +1,10 @@
 import { useResolveCountdown } from '#src/hooks/useResolveCountdown';
-import { useGameNotifications } from './hooks/useGameNotifications';
-import { useGamePriceState } from './hooks/useGamePriceState';
-import { useGameSession } from './hooks/useGameSession';
-import { useGuessSubmission } from './hooks/useGuessSubmission';
-import { usePriceAnimation } from './hooks/usePriceAnimation';
-import { toGamePageViewModel } from './viewModel';
+import { useGameNotifications } from '#src/features/game/state/hooks/useGameNotifications';
+import { useGamePriceState } from '#src/features/game/state/hooks/useGamePriceState';
+import { useGameSession } from '#src/features/game/state/hooks/useGameSession';
+import { useGuessSubmission } from '#src/features/game/state/hooks/useGuessSubmission';
+import { usePriceAnimation } from '#src/features/game/state/hooks/usePriceAnimation';
+import { toGamePageViewModel } from '#src/features/game/state/viewModel';
 
 export const useGamePageState = () => {
   const session = useGameSession();

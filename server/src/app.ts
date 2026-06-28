@@ -63,6 +63,7 @@ export const createAppContext = (options: HandlerOptions = {}) => {
     priceProvider,
     now,
     providerCacheTtlMs,
+    options.onPriceProviderError,
   );
   const createPriceSnapshot = createPriceSnapshotFactory(
     getPrice,

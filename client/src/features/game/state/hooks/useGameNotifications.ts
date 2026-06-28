@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { GameStateResponse, Feedback } from '@epilot/api-contract';
-import type { GameFeedbackProps } from '../../types';
+import type { GameFeedbackProps } from '#src/features/game/types';
 import { useGameWarnings } from '#src/hooks/useGameWarnings';
 import { formatDateTime } from '#src/shared/utils/formatters';
 
