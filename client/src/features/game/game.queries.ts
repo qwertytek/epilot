@@ -68,6 +68,11 @@ const getLatestPriceFromExpiredSnapshotError = (
 const getPriceSnapshotFreshMs = (latestPrice: PriceSnapshot): number =>
   Math.max(Date.parse(latestPrice.expiresAt) - Date.now(), 0);
 
+const getPriceStateFreshMs = (priceState: PriceStateResponse): number =>
+  priceState.latestPrice === null
+    ? (priceState.retryAfterMs ?? defaultPriceStaleTimeMs)
+    : getPriceSnapshotFreshMs(priceState.latestPrice);
+
 const createGameStateQueryOptions = (userId: string) =>
   queryOptions({
     queryKey: gameKeys.state(userId),
@@ -111,7 +116,7 @@ const createPriceStateQueryOptions = (enabled: boolean) =>
     enabled,
     staleTime: (query) =>
       query.state.data
-        ? getPriceSnapshotFreshMs(query.state.data.latestPrice)
+        ? getPriceStateFreshMs(query.state.data)
         : defaultPriceStaleTimeMs,
   });
 
@@ -129,7 +134,10 @@ const useGameStateQuery = (userId = getAnonymousUserId()) => {
     }
 
     queryClient.setQueryData<PriceStateResponse>(gameKeys.price(), {
+      status: 'fresh',
       latestPrice,
+      displayPrice: latestPrice,
+      canCreateGuess: true,
     });
   }, [latestPrice, queryClient]);
 
@@ -170,7 +178,8 @@ const useCreateGuessMutation = (userId: string) => {
 
       if (
         previousState?.activeGuess === null &&
-        previousPriceState !== undefined
+        previousPriceState?.latestPrice !== null &&
+        previousPriceState?.canCreateGuess === true
       ) {
         const createdAt = new Date();
 
@@ -206,7 +215,10 @@ const useCreateGuessMutation = (userId: string) => {
 
         if (latestPrice !== null) {
           queryClient.setQueryData<PriceStateResponse>(gameKeys.price(), {
+            status: 'fresh',
             latestPrice,
+            displayPrice: latestPrice,
+            canCreateGuess: true,
           });
         } else if (context.previousPriceState) {
           queryClient.setQueryData(

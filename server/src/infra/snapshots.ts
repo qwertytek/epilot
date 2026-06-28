@@ -3,7 +3,11 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { PriceSnapshot } from '@epilot/api-contract';
 
 import { ApiError } from '../errors.js';
-import type { PriceProvider, PriceProviderOptions } from '../types.js';
+import type {
+  PriceProvider,
+  PriceProviderOptions,
+  PriceSnapshotFactory,
+} from '../types.js';
 
 type SnapshotPayload = {
   priceUsd: number;
@@ -92,21 +96,47 @@ export const createPriceSnapshotFactory =
     now: () => Date,
     snapshotValidityMs: number,
     snapshotSigningSecret: string,
-  ) =>
-  async (options?: PriceProviderOptions): Promise<PriceSnapshot> => {
-    const priceUsd = await getPrice(options);
-    const lastFetchedAtMs = getPrice.getLastFetchedAtMs?.();
-    const observedAt =
-      lastFetchedAtMs === undefined ? now() : new Date(lastFetchedAtMs);
-    const expiresAt = new Date(observedAt.getTime() + snapshotValidityMs);
-    const payload: SnapshotPayload = {
-      priceUsd,
-      observedAt: observedAt.toISOString(),
-      expiresAt: expiresAt.toISOString(),
+  ): PriceSnapshotFactory => {
+    const createSnapshot = (priceUsd: number, fetchedAtMs?: number) => {
+      const observedAt =
+        fetchedAtMs === undefined ? now() : new Date(fetchedAtMs);
+      const expiresAt = new Date(observedAt.getTime() + snapshotValidityMs);
+      const payload: SnapshotPayload = {
+        priceUsd,
+        observedAt: observedAt.toISOString(),
+        expiresAt: expiresAt.toISOString(),
+      };
+
+      return {
+        ...payload,
+        priceSnapshotId: createSnapshotToken(payload, snapshotSigningSecret),
+      };
     };
 
-    return {
-      ...payload,
-      priceSnapshotId: createSnapshotToken(payload, snapshotSigningSecret),
+    const createPriceSnapshot: PriceSnapshotFactory = async (
+      options?: PriceProviderOptions,
+    ): Promise<PriceSnapshot> => {
+      const priceUsd = await getPrice({
+        ...options,
+        maxAgeMs:
+          options?.allowStale === false ? snapshotValidityMs : options?.maxAgeMs,
+      });
+      const lastFetchedAtMs = getPrice.getLastFetchedAtMs?.();
+
+      return createSnapshot(priceUsd, lastFetchedAtMs);
     };
+
+    createPriceSnapshot.getCachedSnapshot = () => {
+      const cachedPrice = getPrice.getCachedPrice?.();
+
+      if (cachedPrice === undefined) {
+        return undefined;
+      }
+
+      return createSnapshot(cachedPrice.priceUsd, cachedPrice.fetchedAtMs);
+    };
+
+    createPriceSnapshot.getRetryAfterMs = () => getPrice.getRetryAfterMs?.();
+
+    return createPriceSnapshot;
   };

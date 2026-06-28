@@ -26,7 +26,7 @@ import './game.css';
 
 const priceSubmitExpiryBufferMs = 1_000;
 const priceExpiryRefreshAllowanceMs = 60_000;
-const stalePriceRefreshRetryMs = 1_000;
+const stalePriceRefreshRetryBackoffMs = [1_000, 2_000, 5_000, 10_000] as const;
 
 const getPriceExpiryRefreshesAllowedUntilMs = () =>
   Date.now() + priceExpiryRefreshAllowanceMs;
@@ -92,20 +92,30 @@ const GamePage = () => {
     priceExpiryRefreshesAllowedUntilMs,
     setPriceExpiryRefreshesAllowedUntilMs,
   ] = useState<number | null>(null);
+  const [priceRefreshRetryAttempt, setPriceRefreshRetryAttempt] = useState(0);
 
   const gameState = gameStateQuery.data ?? null;
   const latestPrice = priceStateQuery.data?.latestPrice ?? null;
+  const displayPrice = priceStateQuery.data?.displayPrice ?? latestPrice;
+  const bettablePrice =
+    resolvedPrice && !isPriceExpired(resolvedPrice) ? resolvedPrice : latestPrice;
   const currentPrice =
-    resolvedPrice && (!isPriceExpired(resolvedPrice) || latestPrice === null)
+    resolvedPrice && (!isPriceExpired(resolvedPrice) || displayPrice === null)
       ? resolvedPrice
-      : latestPrice;
+      : displayPrice;
   const isCurrentPriceExpired = useIsPriceExpired(currentPrice);
   const isCurrentPriceSubmittable =
-    currentPrice !== null &&
-    !isPriceExpired(currentPrice, priceSubmitExpiryBufferMs);
+    bettablePrice !== null &&
+    !isPriceExpired(bettablePrice, priceSubmitExpiryBufferMs) &&
+    (priceStateQuery.data?.canCreateGuess ?? true);
   const displayedPrice = currentPrice;
   const isGameStateKnown = gameStateQuery.data !== undefined;
   const isPriceStale = currentPrice !== null && isCurrentPriceExpired;
+  const isPriceUnavailable = priceStateQuery.data?.status === 'unavailable';
+  const needsPriceRefresh =
+    isPriceStale ||
+    isPriceUnavailable ||
+    priceStateQuery.data?.status === 'stale-fallback';
   const hasAutoRefreshWindowExpired =
     priceExpiryRefreshesAllowedUntilMs !== null &&
     Date.now() >= priceExpiryRefreshesAllowedUntilMs;
@@ -181,6 +191,12 @@ const GamePage = () => {
   }, [activeGuessId]);
 
   useEffect(() => {
+    if (priceStateQuery.data?.status === 'fresh') {
+      setPriceRefreshRetryAttempt(0);
+    }
+  }, [priceStateQuery.data?.status, latestPrice?.priceSnapshotId]);
+
+  useEffect(() => {
     if (currentPrice === null) {
       return;
     }
@@ -204,11 +220,7 @@ const GamePage = () => {
   }, [currentPrice, resolvedAnimationKey]);
 
   useEffect(() => {
-    if (
-      !isPriceStale ||
-      currentPrice === null ||
-      priceStateQuery.isFetching
-    ) {
+    if (!needsPriceRefresh || priceStateQuery.isFetching) {
       return;
     }
 
@@ -225,29 +237,45 @@ const GamePage = () => {
       }
     }
 
+    const retryAfterMs = priceStateQuery.data?.retryAfterMs;
+    const backoffMs =
+      stalePriceRefreshRetryBackoffMs[
+        Math.min(
+          priceRefreshRetryAttempt,
+          stalePriceRefreshRetryBackoffMs.length - 1,
+        )
+      ];
     const timeoutId = window.setTimeout(() => {
+      if (
+        activeGuess === null &&
+        priceExpiryRefreshesAllowedUntilMs !== null &&
+        Date.now() >= priceExpiryRefreshesAllowedUntilMs
+      ) {
+        return;
+      }
+
+      setPriceRefreshRetryAttempt((attempt) => attempt + 1);
       void priceStateQuery.refetch();
-    }, stalePriceRefreshRetryMs);
+    }, retryAfterMs ?? backoffMs);
 
     return () => {
       window.clearTimeout(timeoutId);
     };
   }, [
     activeGuess,
-    currentPrice,
     hasAutoRefreshWindowExpired,
-    isPriceStale,
+    needsPriceRefresh,
     priceExpiryRefreshesAllowedUntilMs,
+    priceRefreshRetryAttempt,
     priceStateQuery,
   ]);
 
   const handleGuess = async (direction: GuessDirection) => {
     if (
       gameState === null ||
-      currentPrice === null ||
+      bettablePrice === null ||
       activeGuess !== null ||
       !isCurrentPriceSubmittable ||
-      isPriceStale ||
       isBusy
     ) {
       return;
@@ -256,7 +284,7 @@ const GamePage = () => {
     dismissPersistentWarnings();
     createGuessMutation.mutate({
       direction,
-      priceSnapshotId: currentPrice.priceSnapshotId,
+      priceSnapshotId: bettablePrice.priceSnapshotId,
     });
   };
 
@@ -277,6 +305,7 @@ const GamePage = () => {
               isRefreshing={priceStateQuery.isFetching}
               isStale={shouldShowStalePriceRefresh}
               onRefresh={() => {
+                setPriceRefreshRetryAttempt(0);
                 setPriceExpiryRefreshesAllowedUntilMs(
                   getPriceExpiryRefreshesAllowedUntilMs(),
                 );
@@ -314,9 +343,8 @@ const GamePage = () => {
               <GuessControls
                 disabled={
                   gameState === null ||
-                  currentPrice === null ||
+                  bettablePrice === null ||
                   !isCurrentPriceSubmittable ||
-                  isPriceStale ||
                   isBusy
                 }
                 label="Which way will it move?"

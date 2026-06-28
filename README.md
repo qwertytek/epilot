@@ -35,11 +35,13 @@ price manually; clicking the refresh button resets the one-minute allowance.
 
 The backend still applies `PROVIDER_CACHE_TTL_MS` around the upstream CoinGecko
 provider. That means repeated `GET /price` calls can return a signed snapshot
-from the backend cache while a provider refresh is happening, limiting
-third-party API traffic independently from the client-side expiry refresh cap.
-By default, snapshots expire after ten seconds while the provider cache is kept
-for fifteen seconds, so the UI can feel active without asking CoinGecko on every
-visible refresh.
+from the backend cache while it is still valid for betting, limiting third-party
+API traffic independently from the client-side expiry refresh cap. If CoinGecko
+is unavailable after the cached snapshot expires, the API can return that stale
+snapshot as read-only display data while guesses remain disabled. By default,
+snapshots expire after thirty seconds while the provider cache is kept for
+fifteen seconds, so normal refreshes have room to reuse cached provider data
+without returning an expired bettable price.
 
 ## Requirements
 
@@ -123,6 +125,7 @@ variables are:
 - `SNAPSHOT_SIGNING_SECRET`
 - `SNAPSHOT_VALIDITY_MS`
 - `PROVIDER_CACHE_TTL_MS`
+- `PRICE_PROVIDER_FAILURE_COOLDOWN_MS`
 - `GUESS_ELIGIBILITY_MS`
 - `CORS_ALLOWED_ORIGINS`
 - `PLAYER_TABLE_NAME`
@@ -263,6 +266,8 @@ For production, also review these Lambda environment values in
 - `COINGECKO_REQUEST_TIMEOUT_MS`: request timeout for the price provider.
 - `PROVIDER_CACHE_TTL_MS`: backend price cache TTL. This limits third-party API
   calls while still serving the latest price available to the backend.
+- `PRICE_PROVIDER_FAILURE_COOLDOWN_MS`: how long the backend waits before
+  retrying the upstream provider after a price request failure.
 - `SNAPSHOT_VALIDITY_MS`: how long a displayed price snapshot can be used to
   create a guess.
 - `GUESS_ELIGIBILITY_MS`: the minimum guess duration. The exercise value is

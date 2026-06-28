@@ -9,7 +9,7 @@ import type {
 
 import { ApiError } from '../errors.js';
 import type { PlayerStore } from './player-store.js';
-import type { PriceProviderOptions } from '../types.js';
+import type { PriceSnapshotFactory } from '../types.js';
 
 export type GameService = ReturnType<typeof createGameService>;
 
@@ -22,9 +22,7 @@ export const createGameService = ({
 }: {
   players: PlayerStore;
   now: () => Date;
-  createPriceSnapshot: (
-    options?: PriceProviderOptions,
-  ) => Promise<PriceSnapshot>;
+  createPriceSnapshot: PriceSnapshotFactory;
   parsePriceSnapshot: (
     priceSnapshotId: string,
   ) => Omit<PriceSnapshot, 'priceSnapshotId'>;
@@ -106,9 +104,36 @@ export const createGameService = ({
     };
   };
 
-  const getPriceState = async (): Promise<PriceStateResponse> => ({
-    latestPrice: await createPriceSnapshot({ allowStale: true }),
-  });
+  const getPriceState = async (): Promise<PriceStateResponse> => {
+    try {
+      const latestPrice = await createPriceSnapshot({ allowStale: false });
+
+      return {
+        status: 'fresh',
+        latestPrice,
+        displayPrice: latestPrice,
+        canCreateGuess: true,
+      };
+    } catch (error) {
+      if (
+        !(error instanceof ApiError) ||
+        error.code !== 'PRICE_PROVIDER_UNAVAILABLE'
+      ) {
+        throw error;
+      }
+
+      const displayPrice = createPriceSnapshot.getCachedSnapshot?.() ?? null;
+      const retryAfterMs = createPriceSnapshot.getRetryAfterMs?.();
+
+      return {
+        status: displayPrice === null ? 'unavailable' : 'stale-fallback',
+        latestPrice: null,
+        displayPrice,
+        canCreateGuess: false,
+        ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
+      };
+    }
+  };
 
   const createGuess = async (
     userId: string,

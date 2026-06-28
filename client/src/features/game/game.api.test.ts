@@ -187,12 +187,39 @@ test('price query stays fresh until the signed snapshot expires', () => {
   )({
     state: {
       data: {
+        status: 'fresh',
         latestPrice,
+        displayPrice: latestPrice,
+        canCreateGuess: true,
       } satisfies PriceStateResponse,
     },
   });
 
   assert.ok(typeof freshMs === 'number' && freshMs > 25_000);
+});
+
+test('price query uses retry delay when no fresh price is available', () => {
+  const staleTime = createPriceStateQueryOptions(true).staleTime;
+
+  if (typeof staleTime !== 'function') {
+    assert.fail('Expected price query staleTime to be a function');
+  }
+
+  const retryMs = (
+    staleTime as (query: { state: { data: PriceStateResponse } }) => number
+  )({
+    state: {
+      data: {
+        status: 'unavailable',
+        latestPrice: null,
+        displayPrice: null,
+        canCreateGuess: false,
+        retryAfterMs: 10_000,
+      } satisfies PriceStateResponse,
+    },
+  });
+
+  assert.equal(retryMs, 10_000);
 });
 
 test('price provider outage uses generic user-facing copy', () => {

@@ -65,7 +65,11 @@ export type GameStateResponse = {
 };
 
 export type PriceStateResponse = {
-  latestPrice: PriceSnapshot;
+  status: 'fresh' | 'stale-fallback' | 'unavailable';
+  latestPrice: PriceSnapshot | null;
+  displayPrice: PriceSnapshot | null;
+  canCreateGuess: boolean;
+  retryAfterMs?: number;
 };
 
 export type CreateGuessRequest = {
