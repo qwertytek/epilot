@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { ApiError } from '../api/http';
-import { getErrorMessage } from '../shared/utils/errors';
-import type { GameFeedbackProps } from '../features/game/model/game.types';
+import { ApiError } from '#src/api/http';
+import type { GameFeedbackProps } from '#src/features/game/types';
+import { getErrorMessage } from '#src/shared/utils/errors';
 
 const WARNING_NOTIFICATION_TTL_MS = 5000;
 const WARNING_NOTIFICATION_EXIT_MS = 260;

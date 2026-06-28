@@ -1,9 +1,9 @@
-import { GameHeader } from './components/GameHeader.js';
-import { GameWarnings } from './components/GameWarnings.js';
-import { GuessPanel } from './components/GuessPanel.js';
-import { PriceDisplay } from './components/PriceDisplay.js';
-import { DevWarnings } from './dev-warnings/DevWarnings.js';
-import { useGamePageState } from './state/index.js';
+import { GameHeader } from './components/GameHeader';
+import { GameWarnings } from './components/GameWarnings';
+import { GuessPanel } from './components/GuessPanel';
+import { PriceDisplay } from './components/PriceDisplay';
+import { DevWarnings } from './dev-warnings/DevWarnings';
+import { useGamePageState } from './state/index';
 
 import './game.css';
 

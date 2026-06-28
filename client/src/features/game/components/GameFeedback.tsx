@@ -1,5 +1,5 @@
-import { StatusMessage } from '../../../shared/components/StatusMessage';
-import type { GameFeedbackProps } from '../model/game.types';
+import { StatusMessage } from '#src/shared/components/StatusMessage';
+import type { GameFeedbackProps } from '../types';
 
 export const GameFeedback = ({
   message,

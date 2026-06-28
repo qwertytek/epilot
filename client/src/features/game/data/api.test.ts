@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { ApiError } from '../../../api/http';
-import { getAnonymousUserId } from '../../../api/identity';
-import { getErrorMessage } from '../../../shared/utils/errors';
-import { pricePollIntervalMs } from '../../../shared/utils/game.price';
+import { defaultLocalApiBaseUrl } from '#src/shared/constants/api';
+import { getAnonymousUserId } from '#src/api/identity';
+import { ApiError } from '#src/api/http';
+import { getErrorMessage } from '#src/shared/utils/errors';
+import { pricePollIntervalMs } from '#src/shared/constants/pricePoll';
 import { getBehindTheScenesFeedback } from '../dev-warnings/feedback';
-import { createGuess, getGameState, getPriceState } from './game.api';
-import { createPriceStateQueryOptions } from './game.queries';
+import { createGuess, getGameState, getPriceState } from './api';
+import { createPriceStateQueryOptions } from './queries';
 
 type FetchCall = {
   url: string;
@@ -81,7 +82,7 @@ test('getGameState sends x-user-id to the state endpoint', async () => {
 
   await getGameState();
 
-  assert.equal(fetchCalls[0]?.url, 'http://127.0.0.1:3000/state');
+  assert.equal(fetchCalls[0]?.url, `${defaultLocalApiBaseUrl}/state`);
   assert.deepEqual(fetchCalls[0]?.init.headers, {
     'content-type': 'application/json',
     'x-user-id': 'generated-user-id',
@@ -93,7 +94,7 @@ test('getPriceState sends x-user-id to the price endpoint', async () => {
 
   await getPriceState();
 
-  assert.equal(fetchCalls[0]?.url, 'http://127.0.0.1:3000/price');
+  assert.equal(fetchCalls[0]?.url, `${defaultLocalApiBaseUrl}/price`);
   assert.deepEqual(fetchCalls[0]?.init.headers, {
     'content-type': 'application/json',
     'x-user-id': 'generated-user-id',
@@ -135,7 +136,7 @@ test('createGuess submits direction and priceSnapshotId without a raw price', as
 
   await createGuess('UP', 'snapshot-token');
 
-  assert.equal(fetchCalls[0]?.url, 'http://127.0.0.1:3000/guesses');
+  assert.equal(fetchCalls[0]?.url, `${defaultLocalApiBaseUrl}/guesses`);
   assert.equal(fetchCalls[0]?.init.method, 'POST');
   assert.deepEqual(JSON.parse(fetchCalls[0]?.init.body as string), {
     direction: 'UP',

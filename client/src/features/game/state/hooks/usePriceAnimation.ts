@@ -1,8 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ActiveGuess, PriceSnapshot } from '@epilot/api-contract';
 
-import { formatCurrencyUsd } from '../../../../shared/utils/formatters.js';
-import { getPriceAnimationTone } from '../../../../shared/utils/game.price.js';
+import { formatCurrencyUsd } from '#src/shared/utils/formatters';
+
+const getPriceAnimationTone = (
+  previousPrice: PriceSnapshot,
+  nextPrice: PriceSnapshot,
+): 'success' | 'error' | 'neutral' => {
+  if (nextPrice.priceUsd === previousPrice.priceUsd) {
+    return 'neutral';
+  }
+
+  return nextPrice.priceUsd > previousPrice.priceUsd ? 'success' : 'error';
+};
 
 type PriceAnimation =
   | {

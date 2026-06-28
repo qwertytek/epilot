@@ -1,4 +1,4 @@
-import { GamePage } from '../features/game/GamePage';
+import { GamePage } from '#src/features/game/GamePage';
 
 import './App.css';
 

@@ -1,5 +1,5 @@
-import { Button } from '../../../shared/components/Button';
-import type { GuessControlsProps } from '../model/game.types';
+import { Button } from '#src/shared/components/Button';
+import type { GuessControlsProps } from '../types';
 
 export const GuessControls = ({
   disabled = false,

@@ -1,6 +1,6 @@
 import type { ActiveGuess, GuessDirection } from '@epilot/api-contract';
 
-import { formatDateTime } from '../../../shared/utils/formatters';
+import { formatDateTime } from '#src/shared/utils/formatters';
 import { GuessControls } from './GuessControls';
 import { GuessStateSkeleton } from './GuessStateSkeleton';
 import { PendingGuess } from './PendingGuess';

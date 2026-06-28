@@ -1,4 +1,4 @@
-import type { GameHeaderProps } from '../model/game.types';
+import type { GameHeaderProps } from '../types';
 
 export const GameHeader = ({ score }: GameHeaderProps) => (
   <header className="flex flex-wrap items-start justify-between gap-5">

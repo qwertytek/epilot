@@ -1,4 +1,4 @@
-import type { GameWarningNotification } from '../../../hooks/useGameWarnings';
+import type { GameWarningNotification } from '#src/hooks/useGameWarnings';
 import { GameFeedback } from './GameFeedback';
 
 type GameWarningsProps = {

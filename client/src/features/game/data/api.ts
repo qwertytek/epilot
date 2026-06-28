@@ -8,7 +8,7 @@ import type {
   ResolveGuessResponse,
 } from '@epilot/api-contract';
 
-import { requestApi } from '../../../api/http.js';
+import { requestApi } from '#src/api/http';
 
 const getGameState = (): Promise<GameStateResponse> => requestApi('/state');
 

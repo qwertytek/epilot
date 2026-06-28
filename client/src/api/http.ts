@@ -4,13 +4,14 @@ import {
   apiBaseLiveUrl,
   apiBaseLocalUrl,
   frontendMode,
-} from '../app/environment.js';
-import { getAnonymousUserId } from './identity.js';
+} from '#src/app/environment';
+import { defaultLocalApiBaseUrl } from '#src/shared/constants/api';
+import { getAnonymousUserId } from './identity';
 
 const configuredApiBaseUrl =
   frontendMode === 'live' || frontendMode === 'production'
     ? apiBaseLiveUrl
-    : (apiBaseLocalUrl ?? 'http://127.0.0.1:3000');
+    : (apiBaseLocalUrl ?? defaultLocalApiBaseUrl);
 
 if (configuredApiBaseUrl === undefined || configuredApiBaseUrl.trim() === '') {
   throw new Error('Missing API base URL for the selected frontend target.');

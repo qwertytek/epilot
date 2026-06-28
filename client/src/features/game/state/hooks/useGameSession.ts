@@ -1,8 +1,8 @@
-import { getAnonymousUserId } from '../../../../api/identity.js';
+import { getAnonymousUserId } from '#src/api/identity';
 import {
   useCreateGuessMutation,
   useGameStateQuery,
-} from '../../model/game.queries';
+} from '#src/features/game/data/queries';
 
 export const useGameSession = () => {
   const userId = getAnonymousUserId();
