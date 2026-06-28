@@ -1,4 +1,4 @@
-import { ApiError } from '../../../api/http';
+import { ApiError } from '#src/api/http';
 
 type DevWarningFeedbackOptions = {
   error: unknown;

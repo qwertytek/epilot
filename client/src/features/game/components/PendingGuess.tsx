@@ -1,4 +1,4 @@
-import type { PendingGuessProps } from '../model/game.types';
+import type { PendingGuessProps } from '../types';
 
 export const PendingGuess = ({ direction, eligibleAt }: PendingGuessProps) => (
   <section className="rounded-2xl border border-brand-border bg-brand-blueSoft p-5">

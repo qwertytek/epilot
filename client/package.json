@@ -3,6 +3,12 @@
   "version": "1.0.0",
   "description": "",
   "type": "module",
+  "imports": {
+    "#src/*": {
+      "development": "./src/*",
+      "default": "./dist-test/*"
+    }
+  },
   "scripts": {
     "dev": "vite",
     "dev:live": "vite --mode live",

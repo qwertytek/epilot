@@ -1,4 +1,4 @@
-import { GameFeedback } from '../../components/GameFeedback';
+import { GameFeedback } from '#src/features/game/components/GameFeedback';
 
 type BehindTheScenesCardProps = {
   feedbackMessages: string[];

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { isDevelopmentApp } from '../../../app/environment';
+import { isDevelopmentApp } from '#src/app/environment';
 import { BehindTheScenesCard } from './components/BehindTheScenesCard';
 import {
   getBehindTheScenesFeedback,

@@ -85,32 +85,55 @@ src/
 └── shared/    Reusable components, styles, utilities, and design tokens
 ```
 
-Feature folders keep stateful, feature-owning components at the top level of
-the feature boundary. Presentational components with no local state stay inside
-that component's `components/` folder:
+Feature folders are organized around a one-way flow:
+
+```text
+data -> state/view model -> components
+```
+
+Use this structure for feature-owned screens:
 
 ```text
 src/features/myFeature/
-├── MyFeature.tsx
-├── myFeature.api.ts
-├── myFeature.queries.ts
+├── MyFeaturePage.tsx
+├── myFeature.css
+├── types.ts
+├── data/
+│   ├── api.ts
+│   ├── api.test.ts
+│   └── queries.ts
+├── state/
+│   ├── index.ts
+│   ├── viewModel.ts
+│   └── hooks/
+│       ├── useMyFeatureSession.ts
+│       └── useMyFeatureAction.ts
 └── components/
     ├── MyFeatureHeader.tsx
     └── MyFeatureControls.tsx
 ```
 
-Nested smart components follow the same rule:
+`data/` owns the server-data boundary for the feature. It contains HTTP calls,
+response normalization, TanStack Query keys, query options, mutations, cache
+updates, invalidation, and optimistic updates. Code in this folder should stay
+close to backend/API shapes and should not format data for display.
 
-```text
-src/features/myFeature/myComponent/
-├── MyComponent.tsx
-└── components/
-    └── MyComponentDetail.tsx
-```
+`state/` owns feature orchestration and screen state. It composes data queries,
+local hooks, interaction rules, notifications, animation state, and other
+derived behavior into a view model for the page. `state/index.ts` is the public
+entry point for the page-level state hook. `state/viewModel.ts` maps feature
+state into component props.
 
-Avoid moving UI into `shared/components` just because it has no state. If a
-component is tied to a specific feature or screen, keep it local to that feature
-or smart component. This keeps state and presentation clearly separated while
-making promotion simple: when a local presentational component becomes useful
-outside its original UI, it can move from `myComponent/components/` to
-`shared/components/` with a clear reason and a small import update.
+`components/` owns feature-local presentation. Components receive already-shaped
+props from the state/view-model layer and should not call feature data queries
+directly. Keep UI in the feature folder when it is tied to a specific screen or
+workflow.
+
+`types.ts` owns feature-level UI contracts that are shared across the feature,
+such as component prop types. Keep API request/response types in the shared
+`@epilot/api-contract` package or inside `data/` when they are truly
+feature-local data shapes.
+
+Avoid moving UI into `shared/components` just because it has no state. Promote a
+component to `shared/components` only after it becomes genuinely reusable outside
+its original feature.
