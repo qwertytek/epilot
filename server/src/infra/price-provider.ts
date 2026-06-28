@@ -60,7 +60,7 @@ export const createCachedPriceProvider = (
     return refreshPromise;
   };
 
-  const getCachedPrice: PriceProvider = async ({ allowStale = true } = {}) => {
+  const getCachedPrice: PriceProvider = async () => {
     const nowMs = now().getTime();
 
     if (
@@ -71,25 +71,27 @@ export const createCachedPriceProvider = (
       return cachedPrice.priceUsd;
     }
 
-    if (cachedPrice !== undefined && allowStale) {
-      lastReturnedFetchedAtMs = cachedPrice.fetchedAtMs;
-      void refreshPrice().catch((error: unknown) => {
-        console.warn('Background price refresh failed.', error);
-      });
-      return cachedPrice.priceUsd;
-    }
-
     try {
       const priceUsd = await refreshPrice();
       lastReturnedFetchedAtMs = cachedPrice?.fetchedAtMs;
       return priceUsd;
     } catch (error) {
+      if (cachedPrice !== undefined) {
+        lastReturnedFetchedAtMs = cachedPrice.fetchedAtMs;
+        return cachedPrice.priceUsd;
+      }
+
+      if (error instanceof ApiError) {
+        throw error;
+      }
+
       console.warn('Price provider request failed.', error);
       throw new ApiError(503, 'PRICE_PROVIDER_UNAVAILABLE');
     }
   };
 
   getCachedPrice.getLastFetchedAtMs = () => lastReturnedFetchedAtMs;
+  getCachedPrice.getCachedPrice = () => cachedPrice;
 
   return getCachedPrice;
 };

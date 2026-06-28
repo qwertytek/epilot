@@ -1,6 +1,6 @@
 import { type CSSProperties, useEffect, useMemo, useState } from 'react';
 
-import type { PriceDisplayProps } from '../game.types';
+import type { PriceDisplayProps } from '../model/game.types';
 
 const formatElapsedTime = (elapsedMs: number) => {
   const elapsedSeconds = Math.max(0, Math.floor(elapsedMs / 1_000));
@@ -20,14 +20,16 @@ const formatElapsedTime = (elapsedMs: number) => {
 
 const getPriceStatus = (
   observedAt: string | null,
-  refreshesAt: string | null,
   now: number,
+  pollIntervalMs: number,
 ) => {
+  const refreshLabel = `updates every ${Math.ceil(pollIntervalMs / 1_000)}s`;
+
   if (observedAt === null) {
     return {
       checkedLabel: 'Snapshot pending',
       progressPercent: 0,
-      refreshLabel: null,
+      refreshLabel,
     };
   }
 
@@ -36,34 +38,19 @@ const getPriceStatus = (
     ? 'Checked recently'
     : `Checked ${formatElapsedTime(now - observedAtMs)}`;
 
-  if (refreshesAt === null || Number.isNaN(observedAtMs)) {
+  if (Number.isNaN(observedAtMs)) {
     return {
       checkedLabel,
       progressPercent: 0,
-      refreshLabel: null,
+      refreshLabel,
     };
   }
 
-  const refreshesAtMs = Date.parse(refreshesAt);
-
-  if (Number.isNaN(refreshesAtMs)) {
-    return {
-      checkedLabel,
-      progressPercent: 0,
-      refreshLabel: null,
-    };
-  }
-
-  const remainingMs = Math.max(refreshesAtMs - now, 0);
-  const totalMs = Math.max(refreshesAtMs - observedAtMs, 1);
+  const elapsedMs = Math.max(now - observedAtMs, 0);
   const progressPercent = Math.min(
     100,
-    Math.max(0, ((totalMs - remainingMs) / totalMs) * 100),
+    Math.max(0, (elapsedMs / pollIntervalMs) * 100),
   );
-  const refreshLabel =
-    remainingMs === 0
-      ? 'refresh due'
-      : `refresh in ${Math.ceil(remainingMs / 1_000)}s`;
 
   return {
     checkedLabel,
@@ -78,12 +65,10 @@ export const PriceDisplay = ({
   animationPreviousPrice,
   animationTone,
   isRefreshing = false,
-  isStale = false,
   lastBet,
   observedAt,
-  onRefresh,
+  pollIntervalMs,
   price,
-  refreshesAt,
 }: PriceDisplayProps) => {
   const [now, setNow] = useState(() => Date.now());
   const isUpdatingExistingPrice = isRefreshing && price !== null;
@@ -93,8 +78,8 @@ export const PriceDisplay = ({
     animationTone !== undefined &&
     price !== null;
   const priceStatus = useMemo(
-    () => getPriceStatus(observedAt, refreshesAt, now),
-    [now, observedAt, refreshesAt],
+    () => getPriceStatus(observedAt, now, pollIntervalMs),
+    [now, observedAt, pollIntervalMs],
   );
   const refreshProgressStyle = {
     '--price-refresh-progress': `${priceStatus.progressPercent}%`,
@@ -114,15 +99,13 @@ export const PriceDisplay = ({
     return () => {
       window.clearInterval(interval);
     };
-  }, [observedAt, refreshesAt]);
+  }, [observedAt]);
 
   return (
     <section
       aria-busy={isRefreshing}
       aria-labelledby="latest-price-heading"
-      className={`game-price-panel${
-        isStale && !isUpdatingExistingPrice ? ' is-stale' : ''
-      }`}
+      className="game-price-panel"
     >
       <p
         className="text-sm font-semibold uppercase tracking-[0.16em] text-brand-secondary"
@@ -181,32 +164,15 @@ export const PriceDisplay = ({
           </>
         )}
       </p>
-      {refreshesAt ? (
-        <div
-          aria-hidden="true"
-          className="price-refresh-progress mt-3"
-          style={refreshProgressStyle}
-        />
-      ) : null}
+      <div
+        aria-hidden="true"
+        className="price-refresh-progress mt-3"
+        style={refreshProgressStyle}
+      />
       {lastBet ? (
         <p className="game-last-bet mt-4 text-sm font-semibold text-brand-primary">
           Last bet: <span>{lastBet}</span>
         </p>
-      ) : null}
-      {isStale && !isUpdatingExistingPrice ? (
-        <div className="price-stale-overlay">
-          <button
-            aria-label="Refresh latest Bitcoin price"
-            className="price-refresh-button"
-            disabled={isRefreshing}
-            onClick={onRefresh}
-            type="button"
-          >
-            <span aria-hidden="true" className="price-refresh-icon">
-              ↻
-            </span>
-          </button>
-        </div>
       ) : null}
     </section>
   );

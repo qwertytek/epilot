@@ -1,9 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
-import type { PriceSnapshot } from '@epilot/api-contract';
-
 import { ApiError } from '../errors.js';
-import type { PriceProvider, PriceProviderOptions } from '../types.js';
+import type { PriceProvider, PriceSnapshotFactory } from '../types.js';
 
 type SnapshotPayload = {
   priceUsd: number;
@@ -86,18 +84,15 @@ export const parseSnapshotToken = (
   }
 };
 
-export const createPriceSnapshotFactory =
-  (
-    getPrice: PriceProvider,
-    now: () => Date,
-    snapshotValidityMs: number,
-    snapshotSigningSecret: string,
-  ) =>
-  async (options?: PriceProviderOptions): Promise<PriceSnapshot> => {
-    const priceUsd = await getPrice(options);
-    const lastFetchedAtMs = getPrice.getLastFetchedAtMs?.();
+export const createPriceSnapshotFactory = (
+  getPrice: PriceProvider,
+  now: () => Date,
+  snapshotValidityMs: number,
+  snapshotSigningSecret: string,
+): PriceSnapshotFactory => {
+  const createSnapshot = (priceUsd: number, fetchedAtMs?: number) => {
     const observedAt =
-      lastFetchedAtMs === undefined ? now() : new Date(lastFetchedAtMs);
+      fetchedAtMs === undefined ? now() : new Date(fetchedAtMs);
     const expiresAt = new Date(observedAt.getTime() + snapshotValidityMs);
     const payload: SnapshotPayload = {
       priceUsd,
@@ -106,7 +101,28 @@ export const createPriceSnapshotFactory =
     };
 
     return {
-      ...payload,
+      priceUsd: payload.priceUsd,
+      observedAt: payload.observedAt,
       priceSnapshotId: createSnapshotToken(payload, snapshotSigningSecret),
     };
   };
+
+  const createPriceSnapshot: PriceSnapshotFactory = async () => {
+    const priceUsd = await getPrice();
+    const lastFetchedAtMs = getPrice.getLastFetchedAtMs?.();
+
+    return createSnapshot(priceUsd, lastFetchedAtMs);
+  };
+
+  createPriceSnapshot.getCachedSnapshot = () => {
+    const cachedPrice = getPrice.getCachedPrice?.();
+
+    if (cachedPrice === undefined) {
+      return undefined;
+    }
+
+    return createSnapshot(cachedPrice.priceUsd, cachedPrice.fetchedAtMs);
+  };
+
+  return createPriceSnapshot;
+};

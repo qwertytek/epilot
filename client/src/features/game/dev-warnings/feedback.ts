@@ -1,13 +1,13 @@
-import { ApiError } from '../../../api/http.js';
+import { ApiError } from '../../../api/http';
 
 type DevWarningFeedbackOptions = {
   error: unknown;
   hasGameState: boolean;
   hasLatestPrice: boolean;
+  isPriceUnavailable: boolean;
   isCheckingResults: boolean;
   isGameStateFetching: boolean;
   isPriceFetching: boolean;
-  isPriceStale: boolean;
 };
 
 const isExpiredPriceSnapshotError = (error: unknown) =>
@@ -34,10 +34,10 @@ const getBehindTheScenesFeedback = ({
   error,
   hasGameState,
   hasLatestPrice,
+  isPriceUnavailable,
   isCheckingResults,
   isGameStateFetching,
   isPriceFetching,
-  isPriceStale,
 }: DevWarningFeedbackOptions) =>
   [
     isExpiredPriceSnapshotError(error)
@@ -54,8 +54,11 @@ const getBehindTheScenesFeedback = ({
       ? 'Refreshing live price in the background...'
       : null,
     isCheckingResults ? 'Checking for results...' : null,
-    hasLatestPrice && isPriceStale && !isPriceFetching
-      ? 'Showing cached price while the latest price refreshes.'
+    isPriceUnavailable && isPriceFetching
+      ? 'Fetching a price before guesses can be placed.'
+      : null,
+    isPriceUnavailable && !isPriceFetching
+      ? 'Price unavailable; waiting for the next scheduled refresh.'
       : null,
   ].filter((message): message is string => message !== null);
 

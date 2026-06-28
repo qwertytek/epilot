@@ -48,6 +48,7 @@ Resources:
           - OPTIONS
         AllowOrigins:
           - http://localhost:5173
+          - https://dev.d1cgb3966fmmq6.amplifyapp.com
           - !Ref FrontendOrigin
 
   ApiFunction:
@@ -66,7 +67,7 @@ Resources:
           PROVIDER_CACHE_TTL_MS: '15000'
           SNAPSHOT_SIGNING_SECRET: !Ref SnapshotSigningSecret
           SNAPSHOT_VALIDITY_MS: '10000'
-          CORS_ALLOWED_ORIGINS: !Sub 'http://localhost:5173,${FrontendOrigin}'
+          CORS_ALLOWED_ORIGINS: !Sub 'http://localhost:5173,https://dev.d1cgb3966fmmq6.amplifyapp.com,${FrontendOrigin}'
           PLAYER_TABLE_NAME: !Ref PlayerTableName
           DYNAMODB_ENDPOINT: !Ref DynamoDbEndpoint
       Policies:

@@ -1,6 +1,6 @@
 import type { Feedback } from '@epilot/api-contract';
 
-import { formatDateTime } from '../../shared/utils/formatters.js';
+import { formatDateTime } from '../../../shared/utils/formatters.js';
 import type { GameFeedbackProps } from './game.types.js';
 
 const getFeedbackMessage = (feedback: Feedback): GameFeedbackProps | null => {

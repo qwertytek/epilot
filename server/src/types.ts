@@ -1,3 +1,4 @@
+import type { PriceSnapshot } from '@epilot/api-contract';
 import type { Player } from './domain/player-store.js';
 import type { PlayerStore } from './domain/player-store.js';
 
@@ -19,14 +20,18 @@ export type Response = {
   body: string;
 };
 
-export type PriceProviderOptions = {
-  allowStale?: boolean;
+export type PriceProvider = (() => Promise<number>) & {
+  getLastFetchedAtMs?: () => number | undefined;
+  getCachedPrice?: () =>
+    | {
+        priceUsd: number;
+        fetchedAtMs: number;
+      }
+    | undefined;
 };
 
-export type PriceProvider = ((
-  options?: PriceProviderOptions,
-) => Promise<number>) & {
-  getLastFetchedAtMs?: () => number | undefined;
+export type PriceSnapshotFactory = (() => Promise<PriceSnapshot>) & {
+  getCachedSnapshot?: () => PriceSnapshot | undefined;
 };
 
 export type HandlerOptions = {

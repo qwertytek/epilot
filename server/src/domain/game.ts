@@ -9,7 +9,7 @@ import type {
 
 import { ApiError } from '../errors.js';
 import type { PlayerStore } from './player-store.js';
-import type { PriceProviderOptions } from '../types.js';
+import type { PriceSnapshotFactory } from '../types.js';
 
 export type GameService = ReturnType<typeof createGameService>;
 
@@ -22,9 +22,7 @@ export const createGameService = ({
 }: {
   players: PlayerStore;
   now: () => Date;
-  createPriceSnapshot: (
-    options?: PriceProviderOptions,
-  ) => Promise<PriceSnapshot>;
+  createPriceSnapshot: PriceSnapshotFactory;
   parsePriceSnapshot: (
     priceSnapshotId: string,
   ) => Omit<PriceSnapshot, 'priceSnapshotId'>;
@@ -37,7 +35,7 @@ export const createGameService = ({
       Awaited<ReturnType<PlayerStore['getOrCreate']>>['activeGuess']
     >,
   ): Promise<ResolveGuessResponse> => {
-    const latestPrice = await createPriceSnapshot({ allowStale: false });
+    const latestPrice = await createPriceSnapshot();
     const observedPriceUsd = latestPrice.priceUsd;
 
     if (observedPriceUsd === activeGuess.startPriceUsd) {
@@ -106,9 +104,28 @@ export const createGameService = ({
     };
   };
 
-  const getPriceState = async (): Promise<PriceStateResponse> => ({
-    latestPrice: await createPriceSnapshot({ allowStale: true }),
-  });
+  const getPriceState = async (): Promise<PriceStateResponse> => {
+    try {
+      const price = await createPriceSnapshot();
+
+      return {
+        price,
+        canCreateGuess: true,
+      };
+    } catch (error) {
+      if (
+        !(error instanceof ApiError) ||
+        error.code !== 'PRICE_PROVIDER_UNAVAILABLE'
+      ) {
+        throw error;
+      }
+
+      return {
+        price: null,
+        canCreateGuess: false,
+      };
+    }
+  };
 
   const createGuess = async (
     userId: string,
@@ -124,7 +141,7 @@ export const createGameService = ({
         error.code === 'PRICE_SNAPSHOT_EXPIRED'
       ) {
         throw new ApiError(410, 'PRICE_SNAPSHOT_EXPIRED', {
-          latestPrice: await createPriceSnapshot({ allowStale: false }),
+          latestPrice: await createPriceSnapshot(),
         });
       }
 

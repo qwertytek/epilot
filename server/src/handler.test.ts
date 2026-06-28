@@ -41,10 +41,11 @@ const template = readFileSync(new URL('../template.yaml', import.meta.url), {
 });
 
 const createTestHandler = (
-  prices: number[] = [100],
+  prices: Array<number | undefined> = [100],
   options: {
     currentTimeMs?: number;
     providerCacheTtlMs?: number;
+    snapshotValidityMs?: number;
   } = {},
 ) => {
   let currentTimeMs = options.currentTimeMs ?? baseTimeMs;
@@ -54,6 +55,7 @@ const createTestHandler = (
     now: () => new Date(currentTimeMs),
     snapshotSigningSecret: 'test-secret',
     providerCacheTtlMs: options.providerCacheTtlMs ?? 0,
+    snapshotValidityMs: options.snapshotValidityMs,
     priceProvider: async () => {
       const price = prices[Math.min(calls, prices.length - 1)];
       calls += 1;
@@ -178,13 +180,17 @@ test('GET /price returns a price snapshot', async () => {
     response.headers['access-control-allow-origin'],
     'http://localhost:5173',
   );
-  assert.equal(body.latestPrice.priceUsd, 101);
-  assert.equal(typeof body.latestPrice.priceSnapshotId, 'string');
-  assert.equal(body.latestPrice.observedAt, '2026-06-25T12:00:00.000Z');
+  assert.equal(body.canCreateGuess, true);
+  assert.equal(body.price?.priceUsd, 101);
+  assert.equal(typeof body.price?.priceSnapshotId, 'string');
+  assert.equal(body.price?.observedAt, '2026-06-25T12:00:00.000Z');
 });
 
-test('repeated price calls within cache TTL avoid repeated provider calls', async () => {
-  const context = createTestHandler([100, 200], { providerCacheTtlMs: 10_000 });
+test('cached price inside provider cache ttl avoids repeated provider calls', async () => {
+  const context = createTestHandler([100, 200], {
+    providerCacheTtlMs: 15_000,
+    snapshotValidityMs: 30_000,
+  });
 
   const first = await context.handler(event('GET', '/price'));
   const second = await context.handler(event('GET', '/price'));
@@ -192,29 +198,96 @@ test('repeated price calls within cache TTL avoid repeated provider calls', asyn
   assert.equal(first.statusCode, 200);
   assert.equal(second.statusCode, 200);
   assert.equal(context.calls, 1);
-  assert.equal(json<PriceStateResponse>(second).latestPrice.priceUsd, 100);
+  assert.equal(json<PriceStateResponse>(second).price?.priceUsd, 100);
 });
 
-test('price state can return stale cached price while refreshing the provider', async () => {
-  const context = createTestHandler([100, 200], { providerCacheTtlMs: 10_000 });
+test('concurrent cache misses share one provider request', async () => {
+  let calls = 0;
+  let resolvePrice: ((price: number) => void) | undefined;
+  const providerPromise = new Promise<number>((resolve) => {
+    resolvePrice = resolve;
+  });
+  const handler = createHandler({
+    now: () => new Date(baseTimeMs),
+    snapshotSigningSecret: 'test-secret',
+    providerCacheTtlMs: 15_000,
+    priceProvider: async () => {
+      calls += 1;
+      return providerPromise;
+    },
+  });
+
+  const firstRequest = handler(
+    event('GET', '/price', undefined, browserHeaders),
+  );
+  const secondRequest = handler(
+    event('GET', '/price', undefined, browserHeaders),
+  );
+
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(calls, 1);
+
+  if (resolvePrice === undefined) {
+    assert.fail('Expected pending provider request resolver');
+  }
+
+  resolvePrice(123);
+  const [first, second] = await Promise.all([firstRequest, secondRequest]);
+
+  assert.equal(json<PriceStateResponse>(first).price?.priceUsd, 123);
+  assert.equal(json<PriceStateResponse>(second).price?.priceUsd, 123);
+});
+
+test('expired cached price is returned as usable fallback when refresh fails', async () => {
+  const context = createTestHandler([100, undefined], {
+    providerCacheTtlMs: 10_000,
+    snapshotValidityMs: 30_000,
+  });
 
   const first = json<PriceStateResponse>(
     await context.handler(event('GET', '/price')),
   );
-  context.advance(10_001);
+  context.advance(30_001);
   const second = json<PriceStateResponse>(
     await context.handler(event('GET', '/price')),
   );
-  await Promise.resolve();
-  const third = json<PriceStateResponse>(
+
+  assert.equal(first.price?.priceUsd, 100);
+  assert.equal(second.price?.priceUsd, 100);
+  assert.equal(second.canCreateGuess, true);
+  assert.equal(second.price?.observedAt, '2026-06-25T12:00:00.000Z');
+  assert.equal(context.calls, 2);
+});
+
+test('provider outage without cache returns unavailable price state', async () => {
+  const context = createTestHandler([undefined]);
+
+  const response = await context.handler(event('GET', '/price'));
+  const body = json<PriceStateResponse>(response);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.price, null);
+  assert.equal(body.canCreateGuess, false);
+  assert.equal(context.calls, 1);
+});
+
+test('provider recovers after returning cached price for a failed refresh', async () => {
+  const context = createTestHandler([100, undefined, 200], {
+    snapshotValidityMs: 30_000,
+  });
+
+  await context.handler(event('GET', '/price'));
+  context.advance(30_001);
+  const firstFallback = json<PriceStateResponse>(
+    await context.handler(event('GET', '/price')),
+  );
+  const secondFallback = json<PriceStateResponse>(
     await context.handler(event('GET', '/price')),
   );
 
-  assert.equal(first.latestPrice.priceUsd, 100);
-  assert.equal(second.latestPrice.priceUsd, 100);
-  assert.equal(second.latestPrice.observedAt, '2026-06-25T12:00:00.000Z');
-  assert.equal(third.latestPrice.priceUsd, 200);
-  assert.equal(context.calls, 2);
+  assert.equal(firstFallback.price?.priceUsd, 100);
+  assert.equal(secondFallback.price?.priceUsd, 200);
+  assert.equal(context.calls, 3);
 });
 
 test('valid unexpired snapshot token can create a guess', async () => {
@@ -223,7 +296,7 @@ test('valid unexpired snapshot token can create a guess', async () => {
   const response = await handler(
     event('POST', '/guesses', {
       direction: 'UP',
-      priceSnapshotId: priceState.latestPrice.priceSnapshotId,
+      priceSnapshotId: priceState.price!.priceSnapshotId,
     }),
   );
   const body = json<CreateGuessResponse>(response);
@@ -248,7 +321,7 @@ test('expired snapshot token is rejected', async () => {
   const response = await context.handler(
     event('POST', '/guesses', {
       direction: 'UP',
-      priceSnapshotId: priceState.latestPrice.priceSnapshotId,
+      priceSnapshotId: priceState.price!.priceSnapshotId,
     }),
   );
   const body = json<ApiErrorResponse>(response);
@@ -265,7 +338,7 @@ test('expired snapshot rejection includes a freshly fetched latest price', async
   const response = await context.handler(
     event('POST', '/guesses', {
       direction: 'UP',
-      priceSnapshotId: priceState.latestPrice.priceSnapshotId,
+      priceSnapshotId: priceState.price!.priceSnapshotId,
     }),
   );
   const body = json<ApiErrorResponse>(response);
@@ -284,7 +357,7 @@ test('tampered snapshot token is rejected', async () => {
   const response = await handler(
     event('POST', '/guesses', {
       direction: 'UP',
-      priceSnapshotId: `${priceState.latestPrice.priceSnapshotId}x`,
+      priceSnapshotId: `${priceState.price!.priceSnapshotId}x`,
     }),
   );
   const body = json<ApiErrorResponse>(response);
@@ -325,7 +398,7 @@ test('user cannot submit extra fields with a valid guess request', async () => {
   const response = await handler(
     event('POST', '/guesses', {
       direction: 'UP',
-      priceSnapshotId: priceState.latestPrice.priceSnapshotId,
+      priceSnapshotId: priceState.price!.priceSnapshotId,
       startPriceUsd: 100,
     }),
   );
@@ -340,7 +413,7 @@ test('user cannot create a second active guess', async () => {
   const priceState = await getPriceState(handler);
   const payload = {
     direction: 'UP',
-    priceSnapshotId: priceState.latestPrice.priceSnapshotId,
+    priceSnapshotId: priceState.price!.priceSnapshotId,
   };
 
   assert.equal(
@@ -360,7 +433,7 @@ test('concurrent create requests result in exactly one active guess', async () =
   const priceState = await getPriceState(handler);
   const payload = {
     direction: 'UP',
-    priceSnapshotId: priceState.latestPrice.priceSnapshotId,
+    priceSnapshotId: priceState.price!.priceSnapshotId,
   };
 
   const responses = await Promise.all([
@@ -380,7 +453,7 @@ test('guess cannot resolve before 60 seconds without fetching a new price', asyn
   await context.handler(
     event('POST', '/guesses', {
       direction: 'UP',
-      priceSnapshotId: priceState.latestPrice.priceSnapshotId,
+      priceSnapshotId: priceState.price!.priceSnapshotId,
     }),
   );
   assert.equal(context.calls, 1);
@@ -401,7 +474,7 @@ test('GET /state keeps guess pending before 60 seconds', async () => {
   await context.handler(
     event('POST', '/guesses', {
       direction: 'UP',
-      priceSnapshotId: priceState.latestPrice.priceSnapshotId,
+      priceSnapshotId: priceState.price!.priceSnapshotId,
     }),
   );
   context.advance(59_999);
@@ -423,7 +496,7 @@ test('GET /state resolves an eligible winning guess and updates score', async ()
   await context.handler(
     event('POST', '/guesses', {
       direction: 'UP',
-      priceSnapshotId: priceState.latestPrice.priceSnapshotId,
+      priceSnapshotId: priceState.price!.priceSnapshotId,
     }),
   );
   context.advance(60_000);
@@ -451,7 +524,7 @@ test('GET /state resolves an eligible losing guess and updates score', async () 
   await context.handler(
     event('POST', '/guesses', {
       direction: 'UP',
-      priceSnapshotId: priceState.latestPrice.priceSnapshotId,
+      priceSnapshotId: priceState.price!.priceSnapshotId,
     }),
   );
   context.advance(60_000);
@@ -482,7 +555,7 @@ test('guess remains pending when observed price is unchanged', async () => {
   await context.handler(
     event('POST', '/guesses', {
       direction: 'UP',
-      priceSnapshotId: priceState.latestPrice.priceSnapshotId,
+      priceSnapshotId: priceState.price!.priceSnapshotId,
     }),
   );
   context.advance(60_000);
@@ -501,7 +574,7 @@ test('correct guess increments score', async () => {
   await context.handler(
     event('POST', '/guesses', {
       direction: 'UP',
-      priceSnapshotId: priceState.latestPrice.priceSnapshotId,
+      priceSnapshotId: priceState.price!.priceSnapshotId,
     }),
   );
   context.advance(60_000);
@@ -522,7 +595,7 @@ test('correct down guess increments score', async () => {
   await context.handler(
     event('POST', '/guesses', {
       direction: 'DOWN',
-      priceSnapshotId: priceState.latestPrice.priceSnapshotId,
+      priceSnapshotId: priceState.price!.priceSnapshotId,
     }),
   );
   context.advance(60_000);
@@ -540,7 +613,7 @@ test('incorrect guess decrements score', async () => {
   await context.handler(
     event('POST', '/guesses', {
       direction: 'UP',
-      priceSnapshotId: priceState.latestPrice.priceSnapshotId,
+      priceSnapshotId: priceState.price!.priceSnapshotId,
     }),
   );
   context.advance(60_000);
@@ -558,7 +631,7 @@ test('repeated resolve cannot score the same guess twice', async () => {
   await context.handler(
     event('POST', '/guesses', {
       direction: 'UP',
-      priceSnapshotId: priceState.latestPrice.priceSnapshotId,
+      priceSnapshotId: priceState.price!.priceSnapshotId,
     }),
   );
   context.advance(60_000);
@@ -582,7 +655,7 @@ test('CoinGecko failure preserves player state and returns 503 PRICE_PROVIDER_UN
   await context.handler(
     event('POST', '/guesses', {
       direction: 'DOWN',
-      priceSnapshotId: priceState.latestPrice.priceSnapshotId,
+      priceSnapshotId: priceState.price!.priceSnapshotId,
     }),
   );
 
