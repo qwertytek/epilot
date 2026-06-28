@@ -125,7 +125,6 @@ variables are:
 - `SNAPSHOT_SIGNING_SECRET`
 - `SNAPSHOT_VALIDITY_MS`
 - `PROVIDER_CACHE_TTL_MS`
-- `PRICE_PROVIDER_FAILURE_COOLDOWN_MS`
 - `GUESS_ELIGIBILITY_MS`
 - `CORS_ALLOWED_ORIGINS`
 - `PLAYER_TABLE_NAME`
@@ -266,10 +265,8 @@ For production, also review these Lambda environment values in
 - `COINGECKO_REQUEST_TIMEOUT_MS`: request timeout for the price provider.
 - `PROVIDER_CACHE_TTL_MS`: backend price cache TTL. This limits third-party API
   calls while still serving the latest price available to the backend.
-- `PRICE_PROVIDER_FAILURE_COOLDOWN_MS`: how long the backend waits before
-  retrying the upstream provider after a price request failure.
-- `SNAPSHOT_VALIDITY_MS`: how long a displayed price snapshot can be used to
-  create a guess.
+- `SNAPSHOT_VALIDITY_MS`: how long a signed price snapshot token can be used to
+  create a guess. The client does not use this value for refresh timing.
 - `GUESS_ELIGIBILITY_MS`: the minimum guess duration. The exercise value is
   `60000`.
 

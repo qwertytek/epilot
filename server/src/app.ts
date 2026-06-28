@@ -3,7 +3,6 @@ import {
   defaultCoinGeckoPriceUrl,
   defaultCorsAllowedOrigins,
   defaultGuessEligibilityMs,
-  defaultProviderFailureCooldownMs,
   defaultProviderCacheTtlMs,
   defaultSnapshotValidityMs,
   getArrayEnv,
@@ -46,12 +45,6 @@ export const createAppContext = (options: HandlerOptions = {}) => {
   const providerCacheTtlMs =
     options.providerCacheTtlMs ??
     getNumberEnv('PROVIDER_CACHE_TTL_MS', defaultProviderCacheTtlMs);
-  const providerFailureCooldownMs =
-    options.providerFailureCooldownMs ??
-    getNumberEnv(
-      'PRICE_PROVIDER_FAILURE_COOLDOWN_MS',
-      defaultProviderFailureCooldownMs,
-    );
   const guessEligibilityMs =
     options.guessEligibilityMs ??
     getNumberEnv('GUESS_ELIGIBILITY_MS', defaultGuessEligibilityMs);
@@ -70,7 +63,6 @@ export const createAppContext = (options: HandlerOptions = {}) => {
     priceProvider,
     now,
     providerCacheTtlMs,
-    providerFailureCooldownMs,
   );
   const createPriceSnapshot = createPriceSnapshotFactory(
     getPrice,

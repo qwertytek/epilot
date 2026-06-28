@@ -3,6 +3,7 @@ import type { GuessControlsProps } from '../game.types';
 
 export const GuessControls = ({
   disabled = false,
+  disabledReason,
   label,
   onGuess,
   pendingDirection,
@@ -52,5 +53,10 @@ export const GuessControls = ({
         {pendingDirection === 'DOWN' ? 'Submitting...' : 'Price goes down'}
       </Button>
     </div>
+    {disabled && disabledReason ? (
+      <p className="mt-4 rounded-2xl border border-brand-border bg-white px-5 py-3 text-sm font-semibold text-brand-primary">
+        {disabledReason}
+      </p>
+    ) : null}
   </section>
 );

@@ -35,7 +35,7 @@ export const createGameService = ({
       Awaited<ReturnType<PlayerStore['getOrCreate']>>['activeGuess']
     >,
   ): Promise<ResolveGuessResponse> => {
-    const latestPrice = await createPriceSnapshot({ allowStale: false });
+    const latestPrice = await createPriceSnapshot();
     const observedPriceUsd = latestPrice.priceUsd;
 
     if (observedPriceUsd === activeGuess.startPriceUsd) {
@@ -106,12 +106,10 @@ export const createGameService = ({
 
   const getPriceState = async (): Promise<PriceStateResponse> => {
     try {
-      const latestPrice = await createPriceSnapshot({ allowStale: false });
+      const price = await createPriceSnapshot();
 
       return {
-        status: 'fresh',
-        latestPrice,
-        displayPrice: latestPrice,
+        price,
         canCreateGuess: true,
       };
     } catch (error) {
@@ -122,15 +120,9 @@ export const createGameService = ({
         throw error;
       }
 
-      const displayPrice = createPriceSnapshot.getCachedSnapshot?.() ?? null;
-      const retryAfterMs = createPriceSnapshot.getRetryAfterMs?.();
-
       return {
-        status: displayPrice === null ? 'unavailable' : 'stale-fallback',
-        latestPrice: null,
-        displayPrice,
+        price: null,
         canCreateGuess: false,
-        ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
       };
     }
   };
@@ -149,7 +141,7 @@ export const createGameService = ({
         error.code === 'PRICE_SNAPSHOT_EXPIRED'
       ) {
         throw new ApiError(410, 'PRICE_SNAPSHOT_EXPIRED', {
-          latestPrice: await createPriceSnapshot({ allowStale: false }),
+          latestPrice: await createPriceSnapshot(),
         });
       }
 

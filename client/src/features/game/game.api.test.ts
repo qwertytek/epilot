@@ -4,16 +4,10 @@ import test from 'node:test';
 import { ApiError } from '../../api/http.js';
 import { getAnonymousUserId } from '../../api/identity.js';
 import { getErrorMessage } from '../../shared/utils/errors.js';
+import { pricePollIntervalMs } from '../../shared/utils/game.price.js';
 import { getBehindTheScenesFeedback } from './dev-warnings/feedback.js';
 import { createGuess, getGameState, getPriceState } from './game.api.js';
-import {
-  createGameStateQueryOptions,
-  createPriceStateQueryOptions,
-} from './game.queries.js';
-import type {
-  GameStateResponse,
-  PriceStateResponse,
-} from '@epilot/api-contract';
+import { createPriceStateQueryOptions } from './game.queries.js';
 
 type FetchCall = {
   url: string;
@@ -31,7 +25,14 @@ const createApiError = (
     },
   });
 
-const installBrowserMocks = () => {
+const defaultFetchResponse = {
+  score: 0,
+  activeGuess: null,
+  lastBet: null,
+  feedback: { type: 'NONE' },
+};
+
+const installBrowserMocks = (responseBody: unknown = defaultFetchResponse) => {
   const storage = new Map<string, string>();
   const fetchCalls: FetchCall[] = [];
 
@@ -59,12 +60,7 @@ const installBrowserMocks = () => {
 
       return {
         ok: true,
-        json: async () => ({
-          score: 0,
-          activeGuess: null,
-          lastBet: null,
-          feedback: { type: 'NONE' },
-        }),
+        json: async () => responseBody,
       };
     },
   });
@@ -104,6 +100,36 @@ test('getPriceState sends x-user-id to the price endpoint', async () => {
   });
 });
 
+test('getPriceState accepts the current price response', async () => {
+  const price = {
+    priceSnapshotId: 'snapshot-token',
+    priceUsd: 101,
+    observedAt: new Date().toISOString(),
+  };
+
+  installBrowserMocks({ price, canCreateGuess: true });
+
+  assert.deepEqual(await getPriceState(), {
+    price,
+    canCreateGuess: true,
+  });
+});
+
+test('getPriceState normalizes a legacy latestPrice response', async () => {
+  const latestPrice = {
+    priceSnapshotId: 'snapshot-token',
+    priceUsd: 101,
+    observedAt: new Date().toISOString(),
+  };
+
+  installBrowserMocks({ latestPrice });
+
+  assert.deepEqual(await getPriceState(), {
+    price: latestPrice,
+    canCreateGuess: true,
+  });
+});
+
 test('createGuess submits direction and priceSnapshotId without a raw price', async () => {
   const { fetchCalls } = installBrowserMocks();
 
@@ -122,104 +148,12 @@ test('price query options respect the explicit enabled flag', () => {
   assert.equal(createPriceStateQueryOptions(true).enabled, true);
 });
 
-test('resolved comparison price remains available while its snapshot is fresh', () => {
-  const latestPrice = {
-    priceSnapshotId: 'resolved-snapshot',
-    priceUsd: 101,
-    observedAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 30_000).toISOString(),
-  };
-  const previousState: GameStateResponse = {
-    score: 1,
-    activeGuess: null,
-    lastBet: {
-      direction: 'UP',
-      priceUsd: 100,
-      placedAt: new Date().toISOString(),
-    },
-    feedback: {
-      type: 'RESOLVED',
-      outcome: 'CORRECT',
-      scoreDelta: 1,
-    },
-    latestPrice,
-  };
-  const nextState: GameStateResponse = {
-    score: 1,
-    activeGuess: null,
-    lastBet: {
-      direction: 'UP',
-      priceUsd: 100,
-      placedAt: new Date().toISOString(),
-    },
-    feedback: { type: 'NONE' },
-  };
-  const structuralSharing =
-    createGameStateQueryOptions('generated-user-id').structuralSharing;
+test('price query uses client-owned polling frequency', () => {
+  const options = createPriceStateQueryOptions(true);
 
-  if (typeof structuralSharing !== 'function') {
-    assert.fail('Expected game state query structuralSharing to be a function');
-  }
-
-  const mergedState = structuralSharing(previousState, nextState);
-
-  assert.deepEqual(mergedState, {
-    ...nextState,
-    latestPrice,
-  });
-});
-
-test('price query stays fresh until the signed snapshot expires', () => {
-  const latestPrice = {
-    priceSnapshotId: 'resolved-snapshot',
-    priceUsd: 101,
-    observedAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 30_000).toISOString(),
-  };
-  const staleTime = createPriceStateQueryOptions(true).staleTime;
-
-  if (typeof staleTime !== 'function') {
-    assert.fail('Expected price query staleTime to be a function');
-  }
-
-  const freshMs = (
-    staleTime as (query: { state: { data: PriceStateResponse } }) => number
-  )({
-    state: {
-      data: {
-        status: 'fresh',
-        latestPrice,
-        displayPrice: latestPrice,
-        canCreateGuess: true,
-      } satisfies PriceStateResponse,
-    },
-  });
-
-  assert.ok(typeof freshMs === 'number' && freshMs > 25_000);
-});
-
-test('price query uses retry delay when no fresh price is available', () => {
-  const staleTime = createPriceStateQueryOptions(true).staleTime;
-
-  if (typeof staleTime !== 'function') {
-    assert.fail('Expected price query staleTime to be a function');
-  }
-
-  const retryMs = (
-    staleTime as (query: { state: { data: PriceStateResponse } }) => number
-  )({
-    state: {
-      data: {
-        status: 'unavailable',
-        latestPrice: null,
-        displayPrice: null,
-        canCreateGuess: false,
-        retryAfterMs: 10_000,
-      } satisfies PriceStateResponse,
-    },
-  });
-
-  assert.equal(retryMs, 10_000);
+  assert.equal(options.staleTime, Number.POSITIVE_INFINITY);
+  assert.equal(options.refetchInterval, pricePollIntervalMs);
+  assert.equal(options.refetchOnWindowFocus, false);
 });
 
 test('price provider outage uses generic user-facing copy', () => {
@@ -254,10 +188,10 @@ test('price provider outage appears in behind-the-scenes feedback', () => {
       error,
       hasGameState: false,
       hasLatestPrice: false,
+      isPriceUnavailable: false,
       isCheckingResults: false,
       isGameStateFetching: false,
       isPriceFetching: false,
-      isPriceStale: false,
     }),
     ['Price provider unavailable; showing a generic error to the user.'],
   );
@@ -271,10 +205,10 @@ test('network fetch failures appear in behind-the-scenes feedback', () => {
       error,
       hasGameState: false,
       hasLatestPrice: false,
+      isPriceUnavailable: false,
       isCheckingResults: false,
       isGameStateFetching: false,
       isPriceFetching: false,
-      isPriceStale: false,
     }),
     [
       'Unexpected client error; showing a generic error to the user. Failed to fetch',

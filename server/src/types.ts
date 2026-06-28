@@ -20,14 +20,7 @@ export type Response = {
   body: string;
 };
 
-export type PriceProviderOptions = {
-  allowStale?: boolean;
-  maxAgeMs?: number;
-};
-
-export type PriceProvider = ((
-  options?: PriceProviderOptions,
-) => Promise<number>) & {
+export type PriceProvider = (() => Promise<number>) & {
   getLastFetchedAtMs?: () => number | undefined;
   getCachedPrice?: () =>
     | {
@@ -35,14 +28,10 @@ export type PriceProvider = ((
         fetchedAtMs: number;
       }
     | undefined;
-  getRetryAfterMs?: () => number | undefined;
 };
 
-export type PriceSnapshotFactory = ((
-  options?: PriceProviderOptions,
-) => Promise<PriceSnapshot>) & {
+export type PriceSnapshotFactory = (() => Promise<PriceSnapshot>) & {
   getCachedSnapshot?: () => PriceSnapshot | undefined;
-  getRetryAfterMs?: () => number | undefined;
 };
 
 export type HandlerOptions = {
@@ -53,7 +42,6 @@ export type HandlerOptions = {
   snapshotSigningSecret?: string;
   snapshotValidityMs?: number;
   providerCacheTtlMs?: number;
-  providerFailureCooldownMs?: number;
   guessEligibilityMs?: number;
   players?: Map<string, Player>;
   playerStore?: PlayerStore;

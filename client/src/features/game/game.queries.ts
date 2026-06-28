@@ -15,10 +15,9 @@ import type {
 import { createGuess, getGameState, getPriceState } from './game.api.js';
 import { getAnonymousUserId } from '../../api/identity.js';
 import { ApiError } from '../../api/http.js';
+import { pricePollIntervalMs } from '../../shared/utils/game.price.js';
 
 const optimisticGuessEligibilityMs = 60_000;
-const defaultPriceStaleTimeMs = 15_000;
-
 const gameKeys = {
   all: ['game'] as const,
   players: () => [...gameKeys.all, 'players'] as const,
@@ -39,8 +38,7 @@ const isPriceSnapshot = (value: unknown): value is PriceSnapshot => {
     typeof snapshot.priceSnapshotId === 'string' &&
     typeof snapshot.priceUsd === 'number' &&
     Number.isFinite(snapshot.priceUsd) &&
-    typeof snapshot.observedAt === 'string' &&
-    typeof snapshot.expiresAt === 'string'
+    typeof snapshot.observedAt === 'string'
   );
 };
 
@@ -65,37 +63,10 @@ const getLatestPriceFromExpiredSnapshotError = (
   return isPriceSnapshot(latestPrice) ? latestPrice : null;
 };
 
-const getPriceSnapshotFreshMs = (latestPrice: PriceSnapshot): number =>
-  Math.max(Date.parse(latestPrice.expiresAt) - Date.now(), 0);
-
-const getPriceStateFreshMs = (priceState: PriceStateResponse): number =>
-  priceState.latestPrice === null
-    ? (priceState.retryAfterMs ?? defaultPriceStaleTimeMs)
-    : getPriceSnapshotFreshMs(priceState.latestPrice);
-
 const createGameStateQueryOptions = (userId: string) =>
   queryOptions({
     queryKey: gameKeys.state(userId),
     queryFn: getGameState,
-    structuralSharing: (oldState, newState) => {
-      const previousState = oldState as GameStateResponse | undefined;
-      const nextState = newState as GameStateResponse;
-      const latestPrice = previousState?.latestPrice;
-
-      if (
-        nextState.activeGuess !== null ||
-        nextState.latestPrice !== undefined ||
-        latestPrice === undefined ||
-        getPriceSnapshotFreshMs(latestPrice) === 0
-      ) {
-        return nextState;
-      }
-
-      return {
-        ...nextState,
-        latestPrice,
-      };
-    },
     refetchInterval: (query) => {
       const activeGuess = query.state.data?.activeGuess;
 
@@ -114,10 +85,9 @@ const createPriceStateQueryOptions = (enabled: boolean) =>
     queryKey: gameKeys.price(),
     queryFn: ({ signal }) => getPriceState(signal),
     enabled,
-    staleTime: (query) =>
-      query.state.data
-        ? getPriceStateFreshMs(query.state.data)
-        : defaultPriceStaleTimeMs,
+    refetchInterval: pricePollIntervalMs,
+    refetchOnWindowFocus: false,
+    staleTime: Number.POSITIVE_INFINITY,
   });
 
 const useGameStateQuery = (userId = getAnonymousUserId()) => {
@@ -126,17 +96,12 @@ const useGameStateQuery = (userId = getAnonymousUserId()) => {
   const latestPrice = query.data?.latestPrice;
 
   useEffect(() => {
-    if (
-      latestPrice === undefined ||
-      getPriceSnapshotFreshMs(latestPrice) === 0
-    ) {
+    if (latestPrice === undefined) {
       return;
     }
 
     queryClient.setQueryData<PriceStateResponse>(gameKeys.price(), {
-      status: 'fresh',
-      latestPrice,
-      displayPrice: latestPrice,
+      price: latestPrice,
       canCreateGuess: true,
     });
   }, [latestPrice, queryClient]);
@@ -144,14 +109,8 @@ const useGameStateQuery = (userId = getAnonymousUserId()) => {
   return query;
 };
 
-const usePriceStateQuery = (enabled: boolean) => {
-  const queryClient = useQueryClient();
-  const cachedPriceState = queryClient.getQueryData<PriceStateResponse>(
-    gameKeys.price(),
-  );
-
-  return useQuery(createPriceStateQueryOptions(enabled && !cachedPriceState));
-};
+const usePriceStateQuery = (enabled: boolean) =>
+  useQuery(createPriceStateQueryOptions(enabled));
 
 const useCreateGuessMutation = (userId: string) => {
   const queryClient = useQueryClient();
@@ -178,7 +137,7 @@ const useCreateGuessMutation = (userId: string) => {
 
       if (
         previousState?.activeGuess === null &&
-        previousPriceState?.latestPrice !== null &&
+        previousPriceState?.price !== null &&
         previousPriceState?.canCreateGuess === true
       ) {
         const createdAt = new Date();
@@ -188,7 +147,7 @@ const useCreateGuessMutation = (userId: string) => {
           activeGuess: {
             id: 'optimistic-guess',
             direction,
-            startPriceUsd: previousPriceState.latestPrice.priceUsd,
+            startPriceUsd: previousPriceState.price.priceUsd,
             createdAt: createdAt.toISOString(),
             eligibleAt: new Date(
               createdAt.getTime() + optimisticGuessEligibilityMs,
@@ -196,7 +155,7 @@ const useCreateGuessMutation = (userId: string) => {
           },
           lastBet: {
             direction,
-            priceUsd: previousPriceState.latestPrice.priceUsd,
+            priceUsd: previousPriceState.price.priceUsd,
             placedAt: createdAt.toISOString(),
           },
           feedback: {
@@ -215,9 +174,7 @@ const useCreateGuessMutation = (userId: string) => {
 
         if (latestPrice !== null) {
           queryClient.setQueryData<PriceStateResponse>(gameKeys.price(), {
-            status: 'fresh',
-            latestPrice,
-            displayPrice: latestPrice,
+            price: latestPrice,
             canCreateGuess: true,
           });
         } else if (context.previousPriceState) {

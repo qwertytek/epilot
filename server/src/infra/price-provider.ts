@@ -33,7 +33,6 @@ export const createCachedPriceProvider = (
   priceProvider: PriceProvider,
   now: () => Date,
   cacheTtlMs: number,
-  failureCooldownMs: number,
 ): PriceProvider => {
   let cachedPrice:
     | {
@@ -43,7 +42,6 @@ export const createCachedPriceProvider = (
     | undefined;
   let refreshPromise: Promise<number> | undefined;
   let lastReturnedFetchedAtMs: number | undefined;
-  let lastFailureMs: number | undefined;
 
   const refreshPrice = async () => {
     if (refreshPromise !== undefined) {
@@ -53,12 +51,7 @@ export const createCachedPriceProvider = (
     refreshPromise = priceProvider()
       .then((priceUsd) => {
         cachedPrice = { priceUsd, fetchedAtMs: now().getTime() };
-        lastFailureMs = undefined;
         return priceUsd;
-      })
-      .catch((error: unknown) => {
-        lastFailureMs = now().getTime();
-        throw error;
       })
       .finally(() => {
         refreshPromise = undefined;
@@ -67,41 +60,27 @@ export const createCachedPriceProvider = (
     return refreshPromise;
   };
 
-  const getCachedPrice: PriceProvider = async ({
-    allowStale = true,
-    maxAgeMs = cacheTtlMs,
-  } = {}) => {
+  const getCachedPrice: PriceProvider = async () => {
     const nowMs = now().getTime();
-    const allowedCacheAgeMs = Math.min(cacheTtlMs, maxAgeMs);
-    const retryAfterMs = getCachedPrice.getRetryAfterMs?.();
 
     if (
       cachedPrice !== undefined &&
-      nowMs - cachedPrice.fetchedAtMs < allowedCacheAgeMs
+      nowMs - cachedPrice.fetchedAtMs < cacheTtlMs
     ) {
       lastReturnedFetchedAtMs = cachedPrice.fetchedAtMs;
       return cachedPrice.priceUsd;
     }
 
-    if (cachedPrice !== undefined && allowStale) {
-      lastReturnedFetchedAtMs = cachedPrice.fetchedAtMs;
-      if (retryAfterMs === undefined) {
-        void refreshPrice().catch((error: unknown) => {
-          console.warn('Background price refresh failed.', error);
-        });
-      }
-      return cachedPrice.priceUsd;
-    }
-
     try {
-      if (retryAfterMs !== undefined) {
-        throw new ApiError(503, 'PRICE_PROVIDER_UNAVAILABLE');
-      }
-
       const priceUsd = await refreshPrice();
       lastReturnedFetchedAtMs = cachedPrice?.fetchedAtMs;
       return priceUsd;
     } catch (error) {
+      if (cachedPrice !== undefined) {
+        lastReturnedFetchedAtMs = cachedPrice.fetchedAtMs;
+        return cachedPrice.priceUsd;
+      }
+
       if (error instanceof ApiError) {
         throw error;
       }
@@ -113,15 +92,6 @@ export const createCachedPriceProvider = (
 
   getCachedPrice.getLastFetchedAtMs = () => lastReturnedFetchedAtMs;
   getCachedPrice.getCachedPrice = () => cachedPrice;
-  getCachedPrice.getRetryAfterMs = () => {
-    if (lastFailureMs === undefined) {
-      return undefined;
-    }
-
-    const retryAfterMs = lastFailureMs + failureCooldownMs - now().getTime();
-
-    return retryAfterMs > 0 ? retryAfterMs : undefined;
-  };
 
   return getCachedPrice;
 };

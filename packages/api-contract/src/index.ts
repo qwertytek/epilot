@@ -39,7 +39,6 @@ export type PriceSnapshot = {
   priceSnapshotId: string;
   priceUsd: number;
   observedAt: string;
-  expiresAt: string;
 };
 
 export type ActiveGuess = {
@@ -65,11 +64,8 @@ export type GameStateResponse = {
 };
 
 export type PriceStateResponse = {
-  status: 'fresh' | 'stale-fallback' | 'unavailable';
-  latestPrice: PriceSnapshot | null;
-  displayPrice: PriceSnapshot | null;
+  price: PriceSnapshot | null;
   canCreateGuess: boolean;
-  retryAfterMs?: number;
 };
 
 export type CreateGuessRequest = {
