@@ -18,6 +18,11 @@ const getFeedbackMessage = (feedback: Feedback): GameFeedbackProps | null => {
       return {
         message: 'The price was unchanged, so the guess is still open.',
       };
+    case 'RESOLUTION_PENDING':
+      return {
+        message:
+          'Waiting for a fresh BTC price before resolving the open guess.',
+      };
     case 'RESOLVED':
       return {
         message:

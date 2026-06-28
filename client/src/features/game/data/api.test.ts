@@ -12,7 +12,11 @@ import {
   getGameState,
   getPriceState,
 } from '#src/features/game/data/api';
-import { createPriceStateQueryOptions } from '#src/features/game/data/queries';
+import {
+  createGameStateQueryOptions,
+  createPriceStateQueryOptions,
+  gameKeys,
+} from '#src/features/game/data/queries';
 
 type FetchCall = {
   url: string;
@@ -159,6 +163,40 @@ test('price query uses client-owned polling frequency', () => {
   assert.equal(options.staleTime, Number.POSITIVE_INFINITY);
   assert.equal(options.refetchInterval, pricePollIntervalMs);
   assert.equal(options.refetchOnWindowFocus, false);
+});
+
+test('game state latest price cache hint preserves canCreateGuess false', async () => {
+  const price = {
+    priceSnapshotId: 'snapshot-token',
+    priceUsd: 101,
+    observedAt: new Date().toISOString(),
+  };
+  const queryData = {
+    score: 0,
+    activeGuess: null,
+    lastBet: null,
+    feedback: { type: 'RESOLUTION_PENDING' },
+    latestPrice: price,
+    latestPriceCanCreateGuess: false,
+  };
+  const writes: unknown[] = [];
+  const queryClient = {
+    setQueryData: (_key: unknown, value: unknown) => {
+      writes.push(value);
+    },
+  };
+
+  const latestPrice = queryData.latestPrice;
+  queryClient.setQueryData(gameKeys.price(), {
+    price: latestPrice,
+    canCreateGuess: queryData.latestPriceCanCreateGuess === true,
+  });
+
+  assert.equal(createGameStateQueryOptions('user-1').queryKey[0], 'game');
+  assert.deepEqual(writes[0], {
+    price,
+    canCreateGuess: false,
+  });
 });
 
 test('price provider outage uses generic user-facing copy', () => {

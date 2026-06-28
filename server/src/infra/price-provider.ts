@@ -45,6 +45,7 @@ export const createCachedPriceProvider = (
     | undefined;
   let refreshPromise: Promise<number> | undefined;
   let lastReturnedFetchedAtMs: number | undefined;
+  let lastReturnedWasStaleFallback = false;
 
   const refreshPrice = async () => {
     if (refreshPromise !== undefined) {
@@ -71,16 +72,20 @@ export const createCachedPriceProvider = (
       nowMs - cachedPrice.fetchedAtMs < cacheTtlMs
     ) {
       lastReturnedFetchedAtMs = cachedPrice.fetchedAtMs;
+      lastReturnedWasStaleFallback = false;
       return cachedPrice.priceUsd;
     }
 
     try {
       const priceUsd = await refreshPrice();
       lastReturnedFetchedAtMs = cachedPrice?.fetchedAtMs;
+      lastReturnedWasStaleFallback = false;
       return priceUsd;
     } catch (error) {
       if (cachedPrice !== undefined) {
+        onPriceProviderError(error);
         lastReturnedFetchedAtMs = cachedPrice.fetchedAtMs;
+        lastReturnedWasStaleFallback = true;
         return cachedPrice.priceUsd;
       }
 
@@ -94,6 +99,8 @@ export const createCachedPriceProvider = (
   };
 
   getCachedPrice.getLastFetchedAtMs = () => lastReturnedFetchedAtMs;
+  getCachedPrice.getLastReturnedWasStaleFallback = () =>
+    lastReturnedWasStaleFallback;
   getCachedPrice.getCachedPrice = () => cachedPrice;
 
   return getCachedPrice;

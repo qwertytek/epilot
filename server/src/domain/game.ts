@@ -9,9 +9,19 @@ import type {
 
 import { ApiError } from '../errors.js';
 import type { PlayerStore } from './player-store.js';
-import type { PriceSnapshotFactory } from '../types.js';
+import type { InternalPriceSnapshot, PriceSnapshotFactory } from '../types.js';
 
 export type GameService = ReturnType<typeof createGameService>;
+
+const toPublicPriceSnapshot = ({
+  priceSnapshotId,
+  priceUsd,
+  observedAt,
+}: InternalPriceSnapshot): PriceSnapshot => ({
+  priceSnapshotId,
+  priceUsd,
+  observedAt,
+});
 
 export const createGameService = ({
   players,
@@ -25,7 +35,7 @@ export const createGameService = ({
   createPriceSnapshot: PriceSnapshotFactory;
   parsePriceSnapshot: (
     priceSnapshotId: string,
-  ) => Omit<PriceSnapshot, 'priceSnapshotId'>;
+  ) => Omit<InternalPriceSnapshot, 'priceSnapshotId'>;
   guessEligibilityMs: number;
 }) => {
   const resolveReadyGuess = async (
@@ -35,13 +45,48 @@ export const createGameService = ({
       Awaited<ReturnType<PlayerStore['getOrCreate']>>['activeGuess']
     >,
   ): Promise<ResolveGuessResponse> => {
-    const latestPrice = await createPriceSnapshot();
+    let internalLatestPrice: InternalPriceSnapshot;
+
+    try {
+      internalLatestPrice = await createPriceSnapshot();
+    } catch (error) {
+      if (
+        error instanceof ApiError &&
+        error.code === 'PRICE_PROVIDER_UNAVAILABLE'
+      ) {
+        return {
+          ...players.toPublicState(player),
+          feedback: {
+            type: 'RESOLUTION_PENDING',
+          },
+        };
+      }
+
+      throw error;
+    }
+
+    const latestPrice = toPublicPriceSnapshot(internalLatestPrice);
     const observedPriceUsd = latestPrice.priceUsd;
+
+    if (
+      !internalLatestPrice.canCreateGuess ||
+      Date.parse(latestPrice.observedAt) < Date.parse(activeGuess.eligibleAt)
+    ) {
+      return {
+        ...players.toPublicState(player),
+        latestPrice,
+        latestPriceCanCreateGuess: internalLatestPrice.canCreateGuess,
+        feedback: {
+          type: 'RESOLUTION_PENDING',
+        },
+      };
+    }
 
     if (observedPriceUsd === activeGuess.startPriceUsd) {
       return {
         ...players.toPublicState(player),
         latestPrice,
+        latestPriceCanCreateGuess: internalLatestPrice.canCreateGuess,
         feedback: {
           type: 'PRICE_UNCHANGED',
         },
@@ -71,6 +116,7 @@ export const createGameService = ({
     return {
       ...players.toPublicState(resolvedPlayer),
       latestPrice,
+      latestPriceCanCreateGuess: internalLatestPrice.canCreateGuess,
       feedback: {
         type: 'RESOLVED',
         outcome: guessedCorrectly ? 'CORRECT' : 'INCORRECT',
@@ -109,8 +155,8 @@ export const createGameService = ({
       const price = await createPriceSnapshot();
 
       return {
-        price,
-        canCreateGuess: true,
+        price: toPublicPriceSnapshot(price),
+        canCreateGuess: price.canCreateGuess,
       };
     } catch (error) {
       if (
@@ -131,7 +177,7 @@ export const createGameService = ({
     userId: string,
     request: CreateGuessRequest,
   ): Promise<CreateGuessResponse> => {
-    let snapshot: Omit<PriceSnapshot, 'priceSnapshotId'>;
+    let snapshot: Omit<InternalPriceSnapshot, 'priceSnapshotId'>;
 
     try {
       snapshot = parsePriceSnapshot(request.priceSnapshotId);
@@ -140,12 +186,18 @@ export const createGameService = ({
         error instanceof ApiError &&
         error.code === 'PRICE_SNAPSHOT_EXPIRED'
       ) {
+        const latestPrice = await createPriceSnapshot();
+
         throw new ApiError(410, 'PRICE_SNAPSHOT_EXPIRED', {
-          latestPrice: await createPriceSnapshot(),
+          latestPrice: toPublicPriceSnapshot(latestPrice),
         });
       }
 
       throw error;
+    }
+
+    if (!snapshot.canCreateGuess) {
+      throw new ApiError(409, 'PRICE_SNAPSHOT_NOT_GUESSABLE');
     }
 
     const createdAt = now();

@@ -15,6 +15,9 @@ export type Feedback =
       type: 'PRICE_UNCHANGED';
     }
   | {
+      type: 'RESOLUTION_PENDING';
+    }
+  | {
       type: 'RESOLVED';
       outcome: 'CORRECT' | 'INCORRECT';
       scoreDelta: 1 | -1;
@@ -26,6 +29,7 @@ export type ApiErrorCode =
   | 'ACTIVE_GUESS_EXISTS'
   | 'NO_ACTIVE_GUESS'
   | 'PRICE_SNAPSHOT_EXPIRED'
+  | 'PRICE_SNAPSHOT_NOT_GUESSABLE'
   | 'INVALID_REQUEST'
   | 'PRICE_SNAPSHOT_INVALID'
   | 'PRICE_PROVIDER_UNAVAILABLE'
@@ -61,6 +65,7 @@ export type GameStateResponse = {
   lastBet: LastBet | null;
   feedback: Feedback;
   latestPrice?: PriceSnapshot;
+  latestPriceCanCreateGuess?: boolean;
 };
 
 export type PriceStateResponse = {

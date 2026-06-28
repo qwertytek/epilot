@@ -106,9 +106,9 @@ const useGameStateQuery = (userId = getAnonymousUserId()) => {
 
     queryClient.setQueryData<PriceStateResponse>(gameKeys.price(), {
       price: latestPrice,
-      canCreateGuess: true,
+      canCreateGuess: query.data?.latestPriceCanCreateGuess === true,
     });
-  }, [latestPrice, queryClient]);
+  }, [latestPrice, query.data?.latestPriceCanCreateGuess, queryClient]);
 
   return query;
 };

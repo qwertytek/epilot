@@ -239,7 +239,7 @@ test('concurrent cache misses share one provider request', async () => {
   assert.equal(json<PriceStateResponse>(second).price?.priceUsd, 123);
 });
 
-test('expired cached price is returned as usable fallback when refresh fails', async () => {
+test('expired cached price is returned as display-only fallback when refresh fails', async () => {
   const context = createTestHandler([100, undefined], {
     providerCacheTtlMs: 10_000,
     snapshotValidityMs: 30_000,
@@ -255,9 +255,29 @@ test('expired cached price is returned as usable fallback when refresh fails', a
 
   assert.equal(first.price?.priceUsd, 100);
   assert.equal(second.price?.priceUsd, 100);
-  assert.equal(second.canCreateGuess, true);
+  assert.equal(second.canCreateGuess, false);
   assert.equal(second.price?.observedAt, '2026-06-25T12:00:00.000Z');
   assert.equal(context.calls, 2);
+});
+
+test('cached price outside snapshot validity is display-only even before provider ttl expires', async () => {
+  const context = createTestHandler([100, 200], {
+    providerCacheTtlMs: 15_000,
+    snapshotValidityMs: 10_000,
+  });
+
+  const first = json<PriceStateResponse>(
+    await context.handler(event('GET', '/price')),
+  );
+  context.advance(10_001);
+  const second = json<PriceStateResponse>(
+    await context.handler(event('GET', '/price')),
+  );
+
+  assert.equal(first.canCreateGuess, true);
+  assert.equal(second.price?.priceUsd, 100);
+  assert.equal(second.canCreateGuess, false);
+  assert.equal(context.calls, 1);
 });
 
 test('provider outage without cache returns unavailable price state', async () => {
@@ -312,6 +332,28 @@ test('valid unexpired snapshot token can create a guess', async () => {
     placedAt: body.activeGuess?.createdAt,
   });
   assert.equal(body.feedback.type, 'GUESS_CREATED');
+});
+
+test('display-only fallback snapshot cannot create a guess', async () => {
+  const context = createTestHandler([100, undefined], {
+    providerCacheTtlMs: 10_000,
+    snapshotValidityMs: 120_000,
+  });
+
+  await context.handler(event('GET', '/price'));
+  context.advance(10_001);
+  const priceState = await getPriceState(context.handler);
+  const response = await context.handler(
+    event('POST', '/guesses', {
+      direction: 'UP',
+      priceSnapshotId: priceState.price!.priceSnapshotId,
+    }),
+  );
+  const body = json<ApiErrorResponse>(response);
+
+  assert.equal(priceState.canCreateGuess, false);
+  assert.equal(response.statusCode, 409);
+  assert.equal(body.error.code, 'PRICE_SNAPSHOT_NOT_GUESSABLE');
 });
 
 test('expired snapshot token is rejected', async () => {
@@ -514,6 +556,7 @@ test('GET /state resolves an eligible winning guess and updates score', async ()
     placedAt: '2026-06-25T12:00:00.000Z',
   });
   assert.equal(body.latestPrice?.priceUsd, 101);
+  assert.equal(body.latestPriceCanCreateGuess, true);
   assert.equal(body.feedback.type, 'RESOLVED');
   assert.equal(body.feedback.outcome, 'CORRECT');
   assert.equal(context.calls, 2);
@@ -567,6 +610,95 @@ test('guess remains pending when observed price is unchanged', async () => {
   assert.equal(response.statusCode, 200);
   assert.equal(body.feedback.type, 'PRICE_UNCHANGED');
   assert.equal(body.activeGuess?.startPriceUsd, 100);
+});
+
+test('eligible guess remains pending when only stale fallback price is available', async () => {
+  const context = createTestHandler([100, undefined], {
+    providerCacheTtlMs: 10_000,
+    snapshotValidityMs: 120_000,
+  });
+  const priceState = await getPriceState(context.handler);
+  await context.handler(
+    event('POST', '/guesses', {
+      direction: 'UP',
+      priceSnapshotId: priceState.price!.priceSnapshotId,
+    }),
+  );
+  context.advance(60_000);
+
+  const response = await context.handler(event('POST', '/guesses/resolve'));
+  const body = json<ResolveGuessResponse>(response);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.feedback.type, 'RESOLUTION_PENDING');
+  assert.equal(body.score, 0);
+  assert.equal(body.activeGuess?.startPriceUsd, 100);
+  assert.equal(body.latestPrice?.priceUsd, 100);
+  assert.equal(context.calls, 2);
+});
+
+test('eligible guess resolves after stale fallback is followed by a fresh price', async () => {
+  const context = createTestHandler([100, undefined, 101], {
+    providerCacheTtlMs: 10_000,
+    snapshotValidityMs: 120_000,
+  });
+  const priceState = await getPriceState(context.handler);
+  await context.handler(
+    event('POST', '/guesses', {
+      direction: 'UP',
+      priceSnapshotId: priceState.price!.priceSnapshotId,
+    }),
+  );
+  context.advance(60_000);
+
+  const pending = json<ResolveGuessResponse>(
+    await context.handler(event('POST', '/guesses/resolve')),
+  );
+  const resolved = json<ResolveGuessResponse>(
+    await context.handler(event('POST', '/guesses/resolve')),
+  );
+
+  assert.equal(pending.feedback.type, 'RESOLUTION_PENDING');
+  assert.equal(resolved.feedback.type, 'RESOLVED');
+  assert.equal(resolved.score, 1);
+  assert.equal(resolved.activeGuess, null);
+  assert.equal(resolved.latestPrice?.priceUsd, 101);
+  assert.equal(context.calls, 3);
+});
+
+test('eligible guess waits for a price observed after the eligibility time', async () => {
+  const context = createTestHandler([100, 101, 102], {
+    providerCacheTtlMs: 15_000,
+    snapshotValidityMs: 120_000,
+  });
+  const priceState = await getPriceState(context.handler);
+  await context.handler(
+    event('POST', '/guesses', {
+      direction: 'UP',
+      priceSnapshotId: priceState.price!.priceSnapshotId,
+    }),
+  );
+  context.advance(55_000);
+  await context.handler(event('GET', '/price'));
+  context.advance(5_000);
+
+  const pending = json<ResolveGuessResponse>(
+    await context.handler(event('POST', '/guesses/resolve')),
+  );
+  context.advance(10_001);
+  const resolved = json<ResolveGuessResponse>(
+    await context.handler(event('POST', '/guesses/resolve')),
+  );
+
+  assert.equal(pending.feedback.type, 'RESOLUTION_PENDING');
+  assert.equal(pending.activeGuess?.startPriceUsd, 100);
+  assert.equal(pending.latestPrice?.priceUsd, 101);
+  assert.equal(pending.latestPriceCanCreateGuess, true);
+  assert.equal(resolved.feedback.type, 'RESOLVED');
+  assert.equal(resolved.score, 1);
+  assert.equal(resolved.latestPrice?.priceUsd, 102);
+  assert.equal(resolved.latestPriceCanCreateGuess, true);
+  assert.equal(context.calls, 3);
 });
 
 test('correct guess increments score', async () => {
@@ -650,7 +782,7 @@ test('repeated resolve cannot score the same guess twice', async () => {
   assert.equal(second.error.code, 'NO_ACTIVE_GUESS');
 });
 
-test('CoinGecko failure preserves player state and returns 503 PRICE_PROVIDER_UNAVAILABLE', async () => {
+test('CoinGecko failure during resolution preserves player state and leaves guess pending', async () => {
   const context = createTestHandler([100]);
   const priceState = await getPriceState(context.handler);
   await context.handler(
@@ -689,8 +821,11 @@ test('CoinGecko failure preserves player state and returns 503 PRICE_PROVIDER_UN
   });
 
   const response = await failingHandler(event('POST', '/guesses/resolve'));
-  const body = json<ApiErrorResponse>(response);
+  const body = json<ResolveGuessResponse>(response);
 
-  assert.equal(response.statusCode, 503);
-  assert.equal(body.error.code, 'PRICE_PROVIDER_UNAVAILABLE');
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.feedback.type, 'RESOLUTION_PENDING');
+  assert.equal(body.score, 7);
+  assert.equal(body.activeGuess?.direction, 'DOWN');
+  assert.equal(body.latestPrice, undefined);
 });

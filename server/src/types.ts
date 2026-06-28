@@ -22,6 +22,7 @@ export type Response = {
 
 export type PriceProvider = (() => Promise<number>) & {
   getLastFetchedAtMs?: () => number | undefined;
+  getLastReturnedWasStaleFallback?: () => boolean;
   getCachedPrice?: () =>
     | {
         priceUsd: number;
@@ -30,8 +31,12 @@ export type PriceProvider = (() => Promise<number>) & {
     | undefined;
 };
 
-export type PriceSnapshotFactory = (() => Promise<PriceSnapshot>) & {
-  getCachedSnapshot?: () => PriceSnapshot | undefined;
+export type InternalPriceSnapshot = PriceSnapshot & {
+  canCreateGuess: boolean;
+};
+
+export type PriceSnapshotFactory = (() => Promise<InternalPriceSnapshot>) & {
+  getCachedSnapshot?: () => InternalPriceSnapshot | undefined;
 };
 
 export type HandlerOptions = {

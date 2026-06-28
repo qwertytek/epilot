@@ -44,9 +44,12 @@ fifteen seconds by default, which limits third-party API traffic even though the
 client polls every ten seconds. Snapshot expiry is based on the provider
 observation time, so lowering `SNAPSHOT_VALIDITY_MS` below
 `PROVIDER_CACHE_TTL_MS` can make cached snapshot tokens expire before the
-provider cache refreshes. If the provider is unavailable and no cached price
-exists, `GET /price` returns `price: null` and `canCreateGuess: false`, so the UI
-keeps betting disabled until a later refresh succeeds.
+provider cache refreshes. Cached prices that are stale, expired, or returned only
+because the provider is unavailable are display-only: `GET /price` includes the
+price but returns `canCreateGuess: false`. If the provider is unavailable and no
+cached price exists, `GET /price` returns `price: null` and
+`canCreateGuess: false`, so the UI keeps betting disabled until a later refresh
+succeeds.
 
 ## Requirements
 
