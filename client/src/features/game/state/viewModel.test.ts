@@ -3,9 +3,7 @@ import { test } from 'node:test';
 
 import { toGamePageViewModel } from './viewModel.js';
 
-test('display-only price shows stale refresh affordance', () => {
-  let refetchCount = 0;
-
+test('display-only price is shown without refresh overlay props', () => {
   const viewModel = toGamePageViewModel({
     guess: {
       canGuess: false,
@@ -26,9 +24,6 @@ test('display-only price shows stale refresh affordance', () => {
       isPriceUnavailable: true,
       priceStateQuery: {
         isFetching: false,
-        refetch: () => {
-          refetchCount += 1;
-        },
       },
     } as never,
     priceAnimation: null,
@@ -44,16 +39,12 @@ test('display-only price shows stale refresh affordance', () => {
     } as never,
   });
 
-  assert.equal(viewModel.priceDisplayProps.isStale, true);
-
-  viewModel.priceDisplayProps.onRefresh();
-
-  assert.equal(refetchCount, 1);
+  assert.equal(viewModel.priceDisplayProps.price, '$123.00');
+  assert.equal('isStale' in viewModel.priceDisplayProps, false);
+  assert.equal('onRefresh' in viewModel.priceDisplayProps, false);
 });
 
-test('unavailable null price shows only refresh overlay and click refetches', () => {
-  const calls: string[] = [];
-
+test('unavailable null price remains on automatic refresh path', () => {
   const viewModel = toGamePageViewModel({
     guess: {
       canGuess: false,
@@ -70,9 +61,6 @@ test('unavailable null price shows only refresh overlay and click refetches', ()
       isPriceUnavailable: true,
       priceStateQuery: {
         isFetching: false,
-        refetch: () => {
-          calls.push('refetch');
-        },
       },
     } as never,
     priceAnimation: null,
@@ -89,15 +77,12 @@ test('unavailable null price shows only refresh overlay and click refetches', ()
   });
 
   assert.equal(viewModel.priceDisplayProps.price, null);
-  assert.equal(viewModel.priceDisplayProps.isStale, true);
   assert.equal(viewModel.guessPanelProps.disabledReason, null);
-
-  viewModel.priceDisplayProps.onRefresh();
-
-  assert.deepEqual(calls, ['refetch']);
+  assert.equal('isStale' in viewModel.priceDisplayProps, false);
+  assert.equal('onRefresh' in viewModel.priceDisplayProps, false);
 });
 
-test('unavailable price does not show refresh overlay during an active bet', () => {
+test('unavailable price during active bet has no refresh overlay props', () => {
   const viewModel = toGamePageViewModel({
     guess: {
       canGuess: false,
@@ -140,5 +125,6 @@ test('unavailable price does not show refresh overlay during an active bet', () 
     } as never,
   });
 
-  assert.equal(viewModel.priceDisplayProps.isStale, false);
+  assert.equal('isStale' in viewModel.priceDisplayProps, false);
+  assert.equal('onRefresh' in viewModel.priceDisplayProps, false);
 });

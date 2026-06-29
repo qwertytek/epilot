@@ -65,9 +65,7 @@ export const PriceDisplay = ({
   animationPreviousPrice,
   animationTone,
   isRefreshing = false,
-  isStale = false,
   lastBet,
-  onRefresh,
   observedAt,
   pollIntervalMs,
   price,
@@ -107,7 +105,7 @@ export const PriceDisplay = ({
     <section
       aria-busy={isRefreshing}
       aria-labelledby="latest-price-heading"
-      className={`game-price-panel${isStale ? ' is-stale' : ''}`}
+      className="game-price-panel"
     >
       <p
         className="text-sm font-semibold uppercase tracking-[0.16em] text-brand-secondary"
@@ -175,21 +173,6 @@ export const PriceDisplay = ({
         <p className="game-last-bet mt-4 text-sm font-semibold text-brand-primary">
           Last bet: <span>{lastBet}</span>
         </p>
-      ) : null}
-      {isStale ? (
-        <div className="price-stale-overlay">
-          <button
-            aria-label="Refresh latest Bitcoin price"
-            className="price-refresh-button"
-            disabled={isRefreshing}
-            onClick={onRefresh}
-            type="button"
-          >
-            <span aria-hidden="true" className="price-refresh-icon">
-              ↻
-            </span>
-          </button>
-        </div>
       ) : null}
     </section>
   );

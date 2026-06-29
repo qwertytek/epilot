@@ -5,18 +5,16 @@ import { renderToStaticMarkup } from 'react-dom/server';
 
 import { PriceDisplay } from './PriceDisplay.js';
 
-test('stale price display renders refresh overlay', () => {
+test('price display renders automatic refresh status without overlay', () => {
   const markup = renderToStaticMarkup(
     createElement(PriceDisplay, {
-      isStale: true,
       lastBet: null,
       observedAt: '2026-06-29T00:00:00.000Z',
-      onRefresh: () => {},
       pollIntervalMs: 10_000,
       price: '$123.00',
     }),
   );
 
-  assert.match(markup, /price-stale-overlay/);
-  assert.match(markup, /Refresh latest Bitcoin price/);
+  assert.match(markup, /updates every 10s/);
+  assert.doesNotMatch(markup, /price-stale-overlay/);
 });
