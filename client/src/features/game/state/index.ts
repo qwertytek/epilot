@@ -8,7 +8,9 @@ import { toGamePageViewModel } from '#src/features/game/state/viewModel';
 
 export const useGamePageState = () => {
   const session = useGameSession();
-  const price = useGamePriceState();
+  const price = useGamePriceState({
+    shouldPollPrice: session.activeGuess === null,
+  });
   const notifications = useGameNotifications({
     createGuessMutation: session.createGuessMutation,
     gameState: session.gameState,

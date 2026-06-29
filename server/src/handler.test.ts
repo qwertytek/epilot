@@ -646,6 +646,33 @@ test('eligible guess remains pending when only stale fallback price is available
   assert.equal(context.calls, 2);
 });
 
+test('eligible guess resolves from recent moved cache when fresh price is unavailable', async () => {
+  const context = createTestHandler([100, 99, undefined], {
+    providerCacheTtlMs: 10_000,
+    snapshotValidityMs: 120_000,
+  });
+  const priceState = await getPriceState(context.handler);
+  await context.handler(
+    event('POST', '/guesses', {
+      direction: 'UP',
+      priceSnapshotId: priceState.price!.priceSnapshotId,
+    }),
+  );
+  context.advance(55_000);
+  await context.handler(event('GET', '/price'));
+  context.advance(5_000);
+
+  const response = await context.handler(event('POST', '/guesses/resolve'));
+  const body = json<ResolveGuessResponse>(response);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.feedback.type, 'RESOLVED');
+  assert.equal(body.score, -1);
+  assert.equal(body.activeGuess, null);
+  assert.equal(body.latestPrice?.priceUsd, 99);
+  assert.equal(context.calls, 3);
+});
+
 test('eligible guess resolves after stale fallback is followed by a fresh price', async () => {
   const context = createTestHandler([100, undefined, 101], {
     providerCacheTtlMs: 10_000,

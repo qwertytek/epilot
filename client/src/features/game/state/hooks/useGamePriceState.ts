@@ -8,8 +8,12 @@ export const getDisplayPrice = (
   lastKnownPrice: PriceSnapshot | null,
 ) => latestPrice ?? lastKnownPrice;
 
-export const useGamePriceState = () => {
-  const priceStateQuery = usePriceStateQuery(true);
+export const useGamePriceState = ({
+  shouldPollPrice,
+}: {
+  shouldPollPrice: boolean;
+}) => {
+  const priceStateQuery = usePriceStateQuery(shouldPollPrice);
   const latestPrice = priceStateQuery.data?.price ?? null;
   const lastKnownPriceRef = useRef<PriceSnapshot | null>(null);
 
@@ -17,10 +21,7 @@ export const useGamePriceState = () => {
     lastKnownPriceRef.current = latestPrice;
   }
 
-  const currentPrice = getDisplayPrice(
-    latestPrice,
-    lastKnownPriceRef.current,
-  );
+  const currentPrice = getDisplayPrice(latestPrice, lastKnownPriceRef.current);
   const canUsePrice =
     latestPrice !== null && priceStateQuery.data?.canCreateGuess === true;
   const isInitialPriceLoading =
