@@ -65,7 +65,35 @@ export const createGameService = ({
       throw error;
     }
 
-    const latestPrice = toPublicPriceSnapshot(internalLatestPrice);
+    let latestPrice = toPublicPriceSnapshot(internalLatestPrice);
+
+    if (
+      internalLatestPrice.canCreateGuess &&
+      Date.parse(latestPrice.observedAt) < Date.parse(activeGuess.eligibleAt) &&
+      createPriceSnapshot.createFreshSnapshot !== undefined
+    ) {
+      try {
+        internalLatestPrice = await createPriceSnapshot.createFreshSnapshot();
+        latestPrice = toPublicPriceSnapshot(internalLatestPrice);
+      } catch (error) {
+        if (
+          error instanceof ApiError &&
+          error.code === 'PRICE_PROVIDER_UNAVAILABLE'
+        ) {
+          return {
+            ...players.toPublicState(player),
+            latestPrice,
+            latestPriceCanCreateGuess: internalLatestPrice.canCreateGuess,
+            feedback: {
+              type: 'RESOLUTION_PENDING',
+            },
+          };
+        }
+
+        throw error;
+      }
+    }
+
     const observedPriceUsd = latestPrice.priceUsd;
 
     if (

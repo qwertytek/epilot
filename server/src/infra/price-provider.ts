@@ -98,6 +98,21 @@ export const createCachedPriceProvider = (
     }
   };
 
+  getCachedPrice.getFreshPrice = async () => {
+    try {
+      const priceUsd = await refreshPrice();
+      lastReturnedFetchedAtMs = cachedPrice?.fetchedAtMs;
+      lastReturnedWasStaleFallback = false;
+      return priceUsd;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+
+      onPriceProviderError(error);
+      throw new ApiError(503, 'PRICE_PROVIDER_UNAVAILABLE');
+    }
+  };
   getCachedPrice.getLastFetchedAtMs = () => lastReturnedFetchedAtMs;
   getCachedPrice.getLastReturnedWasStaleFallback = () =>
     lastReturnedWasStaleFallback;

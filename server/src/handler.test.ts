@@ -675,7 +675,7 @@ test('eligible guess resolves after stale fallback is followed by a fresh price'
   assert.equal(context.calls, 3);
 });
 
-test('eligible guess waits for a price observed after the eligibility time', async () => {
+test('eligible guess refreshes a cached price observed before eligibility', async () => {
   const context = createTestHandler([100, 101, 102], {
     providerCacheTtlMs: 15_000,
     snapshotValidityMs: 120_000,
@@ -691,22 +691,42 @@ test('eligible guess waits for a price observed after the eligibility time', asy
   await context.handler(event('GET', '/price'));
   context.advance(5_000);
 
-  const pending = json<ResolveGuessResponse>(
-    await context.handler(event('POST', '/guesses/resolve')),
-  );
-  context.advance(10_001);
   const resolved = json<ResolveGuessResponse>(
     await context.handler(event('POST', '/guesses/resolve')),
   );
 
-  assert.equal(pending.feedback.type, 'RESOLUTION_PENDING');
-  assert.equal(pending.activeGuess?.startPriceUsd, 100);
-  assert.equal(pending.latestPrice?.priceUsd, 101);
-  assert.equal(pending.latestPriceCanCreateGuess, true);
   assert.equal(resolved.feedback.type, 'RESOLVED');
   assert.equal(resolved.score, 1);
   assert.equal(resolved.latestPrice?.priceUsd, 102);
   assert.equal(resolved.latestPriceCanCreateGuess, true);
+  assert.equal(context.calls, 3);
+});
+
+test('eligible guess bypasses cached pre-eligibility price for resolution', async () => {
+  const context = createTestHandler([100, 101, 102], {
+    providerCacheTtlMs: 15_000,
+    snapshotValidityMs: 120_000,
+  });
+  const priceState = await getPriceState(context.handler);
+  await context.handler(
+    event('POST', '/guesses', {
+      direction: 'UP',
+      priceSnapshotId: priceState.price!.priceSnapshotId,
+    }),
+  );
+  context.advance(58_000);
+  await context.handler(event('GET', '/price'));
+  context.advance(2_000);
+
+  const response = await context.handler(event('GET', '/state'));
+  const body = json<GameStateResponse>(response);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.feedback.type, 'RESOLVED');
+  assert.equal(body.score, 1);
+  assert.equal(body.activeGuess, null);
+  assert.equal(body.latestPrice?.priceUsd, 102);
+  assert.equal(body.latestPrice?.observedAt, '2026-06-25T12:01:00.000Z');
   assert.equal(context.calls, 3);
 });
 

@@ -126,6 +126,18 @@ export const createPriceSnapshotFactory = (
     return createSnapshot(priceUsd, lastFetchedAtMs, isStaleFallback);
   };
 
+  createPriceSnapshot.createFreshSnapshot = async () => {
+    const priceUsd =
+      getPrice.getFreshPrice === undefined
+        ? await getPrice()
+        : await getPrice.getFreshPrice();
+    const lastFetchedAtMs = getPrice.getLastFetchedAtMs?.();
+    const isStaleFallback =
+      getPrice.getLastReturnedWasStaleFallback?.() ?? false;
+
+    return createSnapshot(priceUsd, lastFetchedAtMs, isStaleFallback);
+  };
+
   createPriceSnapshot.getCachedSnapshot = () => {
     const cachedPrice = getPrice.getCachedPrice?.();
 
