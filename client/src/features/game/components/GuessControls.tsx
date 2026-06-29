@@ -53,10 +53,13 @@ export const GuessControls = ({
         {pendingDirection === 'DOWN' ? 'Submitting...' : 'Price goes down'}
       </Button>
     </div>
-    {disabled && disabledReason ? (
-      <p className="mt-4 rounded-2xl border border-brand-border bg-white px-5 py-3 text-sm font-semibold text-brand-primary">
+    <div className="mt-4">
+      <p
+        aria-hidden={!disabled || !disabledReason}
+        className={`game-guess-status ${disabled && disabledReason ? '' : 'invisible'}`}
+      >
         {disabledReason}
       </p>
-    ) : null}
+    </div>
   </section>
 );

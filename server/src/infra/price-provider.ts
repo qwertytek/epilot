@@ -33,6 +33,9 @@ export const createCachedPriceProvider = (
   priceProvider: PriceProvider,
   now: () => Date,
   cacheTtlMs: number,
+  onPriceProviderError: (error: unknown) => void = (error) => {
+    console.warn('Price provider request failed.', error);
+  },
 ): PriceProvider => {
   let cachedPrice:
     | {
@@ -42,6 +45,7 @@ export const createCachedPriceProvider = (
     | undefined;
   let refreshPromise: Promise<number> | undefined;
   let lastReturnedFetchedAtMs: number | undefined;
+  let lastReturnedWasStaleFallback = false;
 
   const refreshPrice = async () => {
     if (refreshPromise !== undefined) {
@@ -68,16 +72,20 @@ export const createCachedPriceProvider = (
       nowMs - cachedPrice.fetchedAtMs < cacheTtlMs
     ) {
       lastReturnedFetchedAtMs = cachedPrice.fetchedAtMs;
+      lastReturnedWasStaleFallback = false;
       return cachedPrice.priceUsd;
     }
 
     try {
       const priceUsd = await refreshPrice();
       lastReturnedFetchedAtMs = cachedPrice?.fetchedAtMs;
+      lastReturnedWasStaleFallback = false;
       return priceUsd;
     } catch (error) {
       if (cachedPrice !== undefined) {
+        onPriceProviderError(error);
         lastReturnedFetchedAtMs = cachedPrice.fetchedAtMs;
+        lastReturnedWasStaleFallback = true;
         return cachedPrice.priceUsd;
       }
 
@@ -85,12 +93,14 @@ export const createCachedPriceProvider = (
         throw error;
       }
 
-      console.warn('Price provider request failed.', error);
+      onPriceProviderError(error);
       throw new ApiError(503, 'PRICE_PROVIDER_UNAVAILABLE');
     }
   };
 
   getCachedPrice.getLastFetchedAtMs = () => lastReturnedFetchedAtMs;
+  getCachedPrice.getLastReturnedWasStaleFallback = () =>
+    lastReturnedWasStaleFallback;
   getCachedPrice.getCachedPrice = () => cachedPrice;
 
   return getCachedPrice;

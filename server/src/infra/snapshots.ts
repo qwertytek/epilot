@@ -7,6 +7,7 @@ type SnapshotPayload = {
   priceUsd: number;
   observedAt: string;
   expiresAt: string;
+  canCreateGuess: boolean;
 };
 
 const encodeBase64Url = (value: string): string =>
@@ -64,6 +65,7 @@ export const parseSnapshotToken = (
     if (
       typeof payload.priceUsd !== 'number' ||
       !Number.isFinite(payload.priceUsd) ||
+      typeof payload.canCreateGuess !== 'boolean' ||
       Number.isNaN(Date.parse(payload.observedAt)) ||
       Number.isNaN(Date.parse(payload.expiresAt))
     ) {
@@ -90,28 +92,38 @@ export const createPriceSnapshotFactory = (
   snapshotValidityMs: number,
   snapshotSigningSecret: string,
 ): PriceSnapshotFactory => {
-  const createSnapshot = (priceUsd: number, fetchedAtMs?: number) => {
+  const createSnapshot = (
+    priceUsd: number,
+    fetchedAtMs: number | undefined,
+    isStaleFallback: boolean,
+  ) => {
     const observedAt =
       fetchedAtMs === undefined ? now() : new Date(fetchedAtMs);
     const expiresAt = new Date(observedAt.getTime() + snapshotValidityMs);
+    const canCreateGuess =
+      !isStaleFallback && expiresAt.getTime() > now().getTime();
     const payload: SnapshotPayload = {
       priceUsd,
       observedAt: observedAt.toISOString(),
       expiresAt: expiresAt.toISOString(),
+      canCreateGuess,
     };
 
     return {
       priceUsd: payload.priceUsd,
       observedAt: payload.observedAt,
       priceSnapshotId: createSnapshotToken(payload, snapshotSigningSecret),
+      canCreateGuess,
     };
   };
 
   const createPriceSnapshot: PriceSnapshotFactory = async () => {
     const priceUsd = await getPrice();
     const lastFetchedAtMs = getPrice.getLastFetchedAtMs?.();
+    const isStaleFallback =
+      getPrice.getLastReturnedWasStaleFallback?.() ?? false;
 
-    return createSnapshot(priceUsd, lastFetchedAtMs);
+    return createSnapshot(priceUsd, lastFetchedAtMs, isStaleFallback);
   };
 
   createPriceSnapshot.getCachedSnapshot = () => {
@@ -121,7 +133,7 @@ export const createPriceSnapshotFactory = (
       return undefined;
     }
 
-    return createSnapshot(cachedPrice.priceUsd, cachedPrice.fetchedAtMs);
+    return createSnapshot(cachedPrice.priceUsd, cachedPrice.fetchedAtMs, false);
   };
 
   return createPriceSnapshot;

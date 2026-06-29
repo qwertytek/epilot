@@ -6,6 +6,8 @@ export const errorMessages: Record<ApiErrorCode, string> = {
   ACTIVE_GUESS_EXISTS: 'An active guess already exists for this user.',
   NO_ACTIVE_GUESS: 'No active guess exists for this user.',
   PRICE_SNAPSHOT_EXPIRED: 'The price snapshot has expired.',
+  PRICE_SNAPSHOT_NOT_GUESSABLE:
+    'The price snapshot cannot be used to create a guess.',
   INVALID_REQUEST: 'The request payload is invalid.',
   PRICE_SNAPSHOT_INVALID: 'The price snapshot is invalid.',
   PRICE_PROVIDER_UNAVAILABLE: 'The price provider is unavailable.',

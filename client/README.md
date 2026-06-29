@@ -1,6 +1,7 @@
 # Client
 
-The frontend for epilot's Bitcoin price-direction game. It is built with Vite, React 19, TypeScript, Tailwind CSS 4, and TanStack Query.
+The frontend for epilot's Bitcoin price-direction game. It is built with Vite,
+React 19, TypeScript, Tailwind CSS 4, and TanStack Query.
 
 ## Run locally
 
@@ -21,8 +22,8 @@ VITE_API_BASE_LIVE=https://your-api-id.execute-api.your-region.amazonaws.com
 VITE_APP_ENV=development
 ```
 
-The dev server uses `VITE_API_BASE_LOCAL` by default. Passing `--mode live` or
-building for production uses `VITE_API_BASE_LIVE`.
+The dev server uses `VITE_API_BASE_LOCAL` by default. Running in Vite `live` or
+`production` mode uses `VITE_API_BASE_LIVE`.
 
 `VITE_APP_ENV` controls the product UI environment. It defaults to
 `development`, including when the client runs with `--mode live` or is hosted
@@ -37,42 +38,50 @@ For this exercise, the shared live link is intentionally expected to use
 
 ```bash
 pnpm --dir client start
-pnpm --dir client start --mode live
+pnpm --dir client start:live
 ```
 
 ## Available commands
 
 ```bash
 pnpm --dir client start                 # start with the local API
-pnpm --dir client start --mode live     # start with the deployed API
-pnpm --dir client build                 # build with the deployed API
-pnpm --dir client build --mode live     # build with the deployed API
+pnpm --dir client start:live            # start with the deployed API
+pnpm --dir client dev                   # alias for the local Vite dev server
+pnpm --dir client dev:live              # alias for the live Vite dev server
+pnpm --dir client build                 # production build with the deployed API
+pnpm --dir client build:live            # build with the deployed API
 pnpm --dir client test                  # type-check and run client node:test tests
 pnpm --dir client preview               # serve the production build locally
 ```
 
 ## Current scope
 
-The client renders a responsive game view connected to the backend API. It currently includes:
+The client renders a responsive game view connected to the backend API. It
+currently includes:
 
 - a market challenge header and live score;
-- the latest BTC/USD price snapshot from `GET /price`;
+- the latest BTC/USD price snapshot from `GET /price`, refreshed every ten
+  seconds;
 - persistent anonymous browser identity via `localStorage`;
 - `x-user-id` request headers for game API calls;
 - up/down prediction controls backed by `POST /guesses`;
 - optimistic pending-guess UI while a guess is submitted;
 - a countdown before the active guess is checked automatically;
-- automatic result checks through `GET /state`, with `POST /guesses/resolve` still available in the API;
-- feedback for loading, API errors, result checks, unchanged prices, resolved score changes, and development-only behind-the-scenes refresh/cache status.
+- automatic result checks through `GET /state`, with
+  `POST /guesses/resolve` still available in the API;
+- feedback for loading, API errors, result checks, unavailable prices,
+  unchanged prices, resolved score changes, and development-only
+  behind-the-scenes refresh/cache status.
 
-The client API layer uses the shared `@epilot/api-contract` package for request and response types. TanStack Query owns game-state fetching, mutation cache updates, retry behavior, stale-state handling, and background refetches.
+The client API layer uses the shared `@epilot/api-contract` package for request
+and response types. TanStack Query owns game-state fetching, price polling,
+mutation cache updates, retry behavior, and background refetches.
 
-Price snapshots are refreshed automatically when they expire, including during a
-pending guess. Active-guess refreshes do not spend the manual-session allowance,
-and the manual refresh button is hidden until the guess ends. Outside an active
-guess, automatic expiry refreshes are allowed for one minute at a time; clicking
-the refresh button resets that one-minute window. The full strategy is
-documented in the root README.
+Price snapshots are refreshed on a fixed ten-second polling interval, including
+during a pending guess. Signed snapshot tokens are validated by the server when
+a guess is submitted; if a token expires before submission, the client updates
+its cache from the latest price returned by the API error details when one is
+available. The full strategy is documented in the root README.
 
 ## Structure
 

@@ -2,6 +2,11 @@
 
 Bitcoin price-direction game built as a TypeScript pnpm workspace.
 
+## Deployed Clients
+
+- Main: https://main.d1cgb3966fmmq6.amplifyapp.com/
+- Dev: https://dev.d1cgb3966fmmq6.amplifyapp.com/
+
 Players get the latest BTC/USD price, predict whether the next eligible price
 check will be higher or lower, then receive a score update after the guess
 window expires. The browser keeps an anonymous user ID in `localStorage` and
@@ -21,27 +26,29 @@ player persistence live on the server.
 ## Price Fetching Strategy
 
 The client fetches the latest BTC/USD snapshot from `GET /price` whether or not
-the player has an active guess. Each signed snapshot includes an `expiresAt`
-value; TanStack Query keeps the snapshot fresh until that timestamp, then the
-game view marks it stale.
+the player has an active guess. TanStack Query polls that endpoint every ten
+seconds and keeps the last successful response available while a refresh is in
+flight, so the game can keep showing the latest known price instead of blanking
+the UI during background checks.
 
-When a displayed price expires, the client automatically calls `GET /price` for
-a replacement snapshot, including while a pending guess is waiting to become
-eligible for resolution. Refreshes during an active guess do not spend the
-manual-session allowance, and the manual refresh button is hidden until the
-guess has ended. Outside an active guess, automatic expiry refreshes are allowed
-for one minute at a time. Once that window expires, the user must refresh the
-price manually; clicking the refresh button resets the one-minute allowance.
+Each price response includes a signed `priceSnapshotId`. The client submits that
+token with `POST /guesses`; the server validates the token before creating the
+guess. The default signing window is ten seconds (`SNAPSHOT_VALIDITY_MS=10000`).
+If the token expires before submission, the API returns a latest price snapshot
+in the error details when it can, and the client updates its cache from that
+response.
 
-The backend still applies `PROVIDER_CACHE_TTL_MS` around the upstream CoinGecko
-provider. That means repeated `GET /price` calls can return a signed snapshot
-from the backend cache while it is still valid for betting, limiting third-party
-API traffic independently from the client-side expiry refresh cap. If CoinGecko
-is unavailable after the cached snapshot expires, the API can return that stale
-snapshot as read-only display data while guesses remain disabled. By default,
-snapshots expire after thirty seconds while the provider cache is kept for
-fifteen seconds, so normal refreshes have room to reuse cached provider data
-without returning an expired bettable price.
+The backend also applies `PROVIDER_CACHE_TTL_MS` around the upstream CoinGecko
+provider. Repeated `GET /price` calls can reuse the cached provider value for
+nine seconds by default, just below the client's ten-second polling interval.
+Snapshot expiry is based on the provider observation time, so setting
+`PROVIDER_CACHE_TTL_MS` at or above the client poll interval can make every other
+poll reuse an expired snapshot. Cached prices that are stale, expired, or
+returned only because the provider is unavailable are display-only: `GET /price`
+includes the price but returns `canCreateGuess: false`. If the provider is
+unavailable and no cached price exists, `GET /price` returns `price: null` and
+`canCreateGuess: false`, so the UI keeps betting disabled until a later refresh
+succeeds.
 
 ## Requirements
 
@@ -76,8 +83,8 @@ This starts DynamoDB Local, the SAM API on `http://127.0.0.1:3000`, and the
 Vite client on `http://localhost:5173`.
 
 The client reads both API endpoints from `client/.env`. `pnpm start` uses
-`VITE_API_BASE_LOCAL`, while `pnpm --dir client start --mode live` uses
-`VITE_API_BASE_LIVE`.
+`VITE_API_BASE_LOCAL`, while `pnpm --dir client start:live` or
+`pnpm --dir client dev:live` uses `VITE_API_BASE_LIVE`.
 
 ## Local API
 
@@ -251,11 +258,13 @@ The deployment template also exposes these production-facing parameters:
   display it in plain text in normal stack views.
 - `PlayerTableName`: the DynamoDB table name for player state.
 
-`FrontendOrigin` is used with `http://localhost:5173` for both
-`GameApi.CorsConfiguration.AllowOrigins` and the Lambda
-`CORS_ALLOWED_ORIGINS` environment variable, so the deployed API can be called
-from the hosted frontend and the local dev frontend. `SnapshotSigningSecret` is
-used for the Lambda `SNAPSHOT_SIGNING_SECRET` environment variable.
+`FrontendOrigin` is used with `http://localhost:5173` and
+`https://dev.d1cgb3966fmmq6.amplifyapp.com` for both
+`GameApi.CorsConfiguration.AllowOrigins` and the Lambda `CORS_ALLOWED_ORIGINS`
+environment variable, so the deployed API can be called from the hosted frontend
+and local development frontend.
+`SnapshotSigningSecret` is used for the Lambda `SNAPSHOT_SIGNING_SECRET`
+environment variable.
 
 For production, also review these Lambda environment values in
 `server/template.yaml`:
@@ -264,7 +273,8 @@ For production, also review these Lambda environment values in
   CoinGecko's simple price API.
 - `COINGECKO_REQUEST_TIMEOUT_MS`: request timeout for the price provider.
 - `PROVIDER_CACHE_TTL_MS`: backend price cache TTL. This limits third-party API
-  calls while still serving the latest price available to the backend.
+  calls while still serving the latest price available to the backend. Keep it
+  below the client polling interval and snapshot validity window.
 - `SNAPSHOT_VALIDITY_MS`: how long a signed price snapshot token can be used to
   create a guess. The client does not use this value for refresh timing.
 - `GUESS_ELIGIBILITY_MS`: the minimum guess duration. The exercise value is
@@ -312,13 +322,14 @@ configuration and secret lifecycle management.
 Build the frontend with the deployed API URL from an environment variable:
 
 ```bash
-VITE_API_BASE_LIVE=https://your-api-id.execute-api.your-region.amazonaws.com pnpm --dir client build
+VITE_API_BASE_LIVE=https://your-api-id.execute-api.your-region.amazonaws.com pnpm --dir client build:live
 ```
 
 Deploy the generated `client/dist` directory to the static host of your choice.
 In hosted build environments such as AWS Amplify, configure
-`VITE_API_BASE_LIVE` as a build environment variable. The production build fails
-if this variable is missing or still uses the placeholder API URL.
+`VITE_API_BASE_LIVE` as a build environment variable. Set
+`VITE_APP_ENV=production` only when the deployed client should hide the
+development-only "Behind the scenes" panel.
 
 After the frontend is live, verify the deployed app by:
 

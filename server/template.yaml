@@ -64,7 +64,7 @@ Resources:
           COINGECKO_PRICE_URL: https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd
           COINGECKO_REQUEST_TIMEOUT_MS: '5000'
           GUESS_ELIGIBILITY_MS: '60000'
-          PROVIDER_CACHE_TTL_MS: '15000'
+          PROVIDER_CACHE_TTL_MS: '9000'
           SNAPSHOT_SIGNING_SECRET: !Ref SnapshotSigningSecret
           SNAPSHOT_VALIDITY_MS: '10000'
           CORS_ALLOWED_ORIGINS: !Sub 'http://localhost:5173,https://dev.d1cgb3966fmmq6.amplifyapp.com,${FrontendOrigin}'

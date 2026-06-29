@@ -1,11 +1,11 @@
 import { formatCurrencyUsd } from '#src/shared/utils/formatters';
 import type { useResolveCountdown } from '#src/hooks/useResolveCountdown';
 import { pricePollIntervalMs } from '#src/shared/constants/pricePoll';
-import type { useGameNotifications } from './hooks/useGameNotifications';
-import type { useGamePriceState } from './hooks/useGamePriceState';
-import type { useGameSession } from './hooks/useGameSession';
-import type { useGuessSubmission } from './hooks/useGuessSubmission';
-import type { usePriceAnimation } from './hooks/usePriceAnimation';
+import type { useGameNotifications } from '#src/features/game/state/hooks/useGameNotifications';
+import type { useGamePriceState } from '#src/features/game/state/hooks/useGamePriceState';
+import type { useGameSession } from '#src/features/game/state/hooks/useGameSession';
+import type { useGuessSubmission } from '#src/features/game/state/hooks/useGuessSubmission';
+import type { usePriceAnimation } from '#src/features/game/state/hooks/usePriceAnimation';
 
 export const toGamePageViewModel = ({
   guess,

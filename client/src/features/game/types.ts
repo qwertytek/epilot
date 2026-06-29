@@ -29,6 +29,7 @@ export type GuessControlsProps = {
 export type PendingGuessProps = {
   direction: GuessDirection;
   eligibleAt: string;
+  headingId?: string;
 };
 
 export type GameFeedbackProps = {
