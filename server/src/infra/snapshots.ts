@@ -114,6 +114,7 @@ export const createPriceSnapshotFactory = (
       observedAt: payload.observedAt,
       priceSnapshotId: createSnapshotToken(payload, snapshotSigningSecret),
       canCreateGuess,
+      isStaleFallback,
     };
   };
 
