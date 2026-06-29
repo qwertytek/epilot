@@ -42,6 +42,52 @@ test('display-only price is shown without refresh overlay props', () => {
   assert.equal(viewModel.priceDisplayProps.price, '$123.00');
   assert.equal('isStale' in viewModel.priceDisplayProps, false);
   assert.equal('onRefresh' in viewModel.priceDisplayProps, false);
+  assert.equal(viewModel.priceDisplayProps.isResolutionAlmostReady, false);
+});
+
+test('active bet marks price display almost ready in final 20 seconds', () => {
+  const viewModel = toGamePageViewModel({
+    guess: {
+      canGuess: false,
+      disabledReason: 'Your previous guess is still being resolved.',
+      pendingDirection: undefined,
+      submitGuess: () => {},
+    } as never,
+    notifications: {
+      error: null,
+      warnings: [],
+    } as never,
+    price: {
+      currentPrice: {
+        observedAt: '2026-06-29T00:00:00.000Z',
+        priceSnapshotId: 'display-price',
+        priceUsd: 456,
+      },
+      isPriceUnavailable: false,
+      priceStateQuery: {
+        isFetching: false,
+      },
+    } as never,
+    priceAnimation: null,
+    resolveWaitSeconds: 20,
+    session: {
+      activeGuess: {
+        createdAt: '2026-06-29T00:00:00.000Z',
+        direction: 'UP',
+        eligibleAt: '2026-06-29T00:01:00.000Z',
+        id: 'active-guess',
+        startPriceUsd: 456,
+      },
+      gameState: null,
+      gameStateQuery: {
+        isFetching: false,
+      },
+      isGameStateKnown: true,
+      resolvedPrice: null,
+    } as never,
+  });
+
+  assert.equal(viewModel.priceDisplayProps.isResolutionAlmostReady, true);
 });
 
 test('unavailable null price remains on automatic refresh path', () => {

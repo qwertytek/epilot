@@ -47,6 +47,8 @@ export const toGamePageViewModel = ({
     animationKey: priceAnimation?.key,
     animationPreviousPrice: priceAnimation?.previousPrice,
     animationTone: priceAnimation?.tone,
+    isResolutionAlmostReady:
+      session.activeGuess !== null && resolveWaitSeconds <= 20,
     isRefreshing: price.priceStateQuery.isFetching,
     lastBet: session.gameState?.lastBet
       ? formatCurrencyUsd(session.gameState.lastBet.priceUsd)
