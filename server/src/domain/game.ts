@@ -117,8 +117,8 @@ export const createGameService = ({
     let latestPrice = toPublicPriceSnapshot(internalLatestPrice);
 
     if (
-      internalLatestPrice.canCreateGuess &&
       Date.parse(latestPrice.observedAt) < Date.parse(activeGuess.eligibleAt) &&
+      !internalLatestPrice.isStaleFallback &&
       createPriceSnapshot.createFreshSnapshot !== undefined
     ) {
       try {

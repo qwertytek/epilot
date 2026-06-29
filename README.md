@@ -2,61 +2,77 @@
 
 Bitcoin price-direction game built as a TypeScript pnpm workspace.
 
-## Deployed Clients
-
-- Main: https://main.d1cgb3966fmmq6.amplifyapp.com/
-- Dev: https://dev.d1cgb3966fmmq6.amplifyapp.com/
-
-Players get the latest BTC/USD price, predict whether the next eligible price
+Players see the latest BTC/USD price, predict whether the next eligible price
 check will be higher or lower, then receive a score update after the guess
 window expires. The browser keeps an anonymous user ID in `localStorage` and
 sends it to the API through the `x-user-id` header.
 
-## Project Structure
+## Live Clients
 
-- `client`: Vite, React 19, Tailwind CSS 4, and TanStack Query frontend.
-- `server`: AWS SAM Lambda API using API Gateway HTTP API locally.
-- `packages/api-contract`: shared TypeScript API request and response types.
+- Main: https://main.d1cgb3966fmmq6.amplifyapp.com/
+- Dev: https://dev.d1cgb3966fmmq6.amplifyapp.com/
 
-The frontend is intentionally thin: it reads game state, fetches price
-snapshots, submits guesses, shows pending guess countdowns, and reacts to API
-feedback. Game rules, snapshot signing, price fetching, score changes, and
-player persistence live on the server.
+## Workspace
 
-## Price Fetching Strategy
+- `client`: Vite, React 19, TypeScript, Tailwind CSS 4, and TanStack Query.
+- `server`: AWS SAM Lambda backend for API Gateway HTTP API.
+- `packages/api-contract`: shared TypeScript request and response types.
 
-The client fetches the latest BTC/USD snapshot from `GET /price` whether or not
-the player has an active guess. TanStack Query polls that endpoint every ten
-seconds and keeps the last successful response available while a refresh is in
-flight, so the game can keep showing the latest known price instead of blanking
-the UI during background checks.
+The frontend owns presentation, anonymous browser identity, TanStack Query
+cache orchestration, price polling, pending-guess countdowns, and feedback UI.
+The backend owns game rules, score changes, signed price snapshots, CoinGecko
+fetching, provider caching, and player persistence.
 
-Each price response includes a signed `priceSnapshotId`. The client submits that
-token with `POST /guesses`; the server validates the token before creating the
-guess. The default signing window is ten seconds (`SNAPSHOT_VALIDITY_MS=10000`).
-If the token expires before submission, the API returns a latest price snapshot
-in the error details when it can, and the client updates its cache from that
-response.
+## Game Flow
 
-The backend also applies `PROVIDER_CACHE_TTL_MS` around the upstream CoinGecko
-provider. Repeated `GET /price` calls can reuse the cached provider value for
-nine seconds by default, just below the client's ten-second polling interval.
-Snapshot expiry is based on the provider observation time, so setting
-`PROVIDER_CACHE_TTL_MS` at or above the client poll interval can make every other
-poll reuse an expired snapshot. Cached prices that are stale, expired, or
-returned only because the provider is unavailable are display-only: `GET /price`
-includes the price but returns `canCreateGuess: false`. If the provider is
-unavailable and no cached price exists, `GET /price` returns `price: null` and
-`canCreateGuess: false`, so the UI keeps betting disabled until a later refresh
-succeeds.
+1. `GET /state` creates or loads the anonymous player's score and active guess.
+2. `GET /price` returns a BTC/USD price snapshot plus `canCreateGuess`.
+3. `POST /guesses` accepts an `UP` or `DOWN` prediction and a signed
+   `priceSnapshotId`.
+4. The guess becomes eligible after `GUESS_ELIGIBILITY_MS` milliseconds
+   (`60000` by default).
+5. `GET /state` automatically resolves eligible guesses. The API also exposes
+   `POST /guesses/resolve`.
+
+If the price is unchanged at resolution time, the guess remains unresolved and
+the response returns `PRICE_UNCHANGED`. Correct guesses add `1` point and
+incorrect guesses subtract `1` point.
+
+## Price Snapshots
+
+The client polls `GET /price` every ten seconds and keeps the last successful
+response visible while a refresh is in flight. Each response includes a signed
+`priceSnapshotId`; the server validates that token before creating a guess.
+
+Default backend timing:
+
+- `SNAPSHOT_VALIDITY_MS=10000`: signed snapshot tokens are valid for ten
+  seconds.
+- `PROVIDER_CACHE_TTL_MS=9000`: repeated backend price reads can reuse the
+  CoinGecko value for nine seconds.
+- `GUESS_ELIGIBILITY_MS=60000`: guesses can resolve after one minute.
+
+The cache TTL is intentionally below the client polling interval and snapshot
+validity window. Cached, stale, expired, or fallback prices can still be
+displayed, but `canCreateGuess: false` disables betting until a valid snapshot
+is available. If CoinGecko is unavailable and no cached value exists,
+`GET /price` returns `price: null` and `canCreateGuess: false`.
 
 ## Requirements
 
-- Node.js v24.18.0 and pnpm 11
+- Node.js 24, matching the SAM runtime `nodejs24.x`
+- pnpm 11.9.0, via the `packageManager` field
 - Docker, for DynamoDB Local
 - AWS SAM CLI, for the local Lambda/API Gateway runtime
 
-## Getting Started
+Enable the pinned pnpm version with Corepack if needed:
+
+```bash
+corepack enable
+corepack prepare pnpm@11.9.0 --activate
+```
+
+## Local Development
 
 Install dependencies:
 
@@ -64,7 +80,7 @@ Install dependencies:
 pnpm install
 ```
 
-Start DynamoDB Local and create the local player table once:
+Start DynamoDB Local and create the player table once:
 
 ```bash
 pnpm dynamodb:setup
@@ -79,41 +95,39 @@ Start the full local app:
 pnpm start
 ```
 
-This starts DynamoDB Local, the SAM API on `http://127.0.0.1:3000`, and the
-Vite client on `http://localhost:5173`.
+This starts:
 
-The client reads both API endpoints from `client/.env`. `pnpm start` uses
-`VITE_API_BASE_LOCAL`, while `pnpm --dir client start:live` or
-`pnpm --dir client dev:live` uses `VITE_API_BASE_LIVE`.
+- DynamoDB Local on `http://localhost:8000`
+- SAM local API on `http://127.0.0.1:3000`
+- Vite client on `http://localhost:5173`
 
-## Local API
-
-The API exposes:
-
-- `GET /health`
-- `GET /price`
-- `GET /state`
-- `POST /guesses`
-- `POST /guesses/resolve`
-
-Game routes require an `x-user-id` header. Local CORS allows
-`http://localhost:5173` and `http://127.0.0.1:5173`.
-
-Manual service commands are also available:
+Useful individual commands:
 
 ```bash
 pnpm dynamodb:start
-pnpm --dir client dev
-pnpm --dir server start
+pnpm start:client
+pnpm start:server
+pnpm --dir client start:live
+pnpm ports:clear
 ```
 
-To use the deployed frontend against a local API, start SAM with the deployed
-frontend origin allowed by CORS:
+`client/src/api/http.ts` chooses the API base URL from Vite mode:
 
-```bash
-pnpm --dir server build
-sam local start-api --parameter-overrides DynamoDbEndpoint=http://host.docker.internal:8000 SnapshotSigningSecret=local-dev-snapshot-signing-secret FrontendOrigin=https://your-frontend.example.com
+- default Vite modes use `VITE_API_BASE_LOCAL`, falling back to
+  `http://127.0.0.1:3000`;
+- `live` and `production` modes use `VITE_API_BASE_LIVE`.
+
+Create `client/.env` when you need explicit local or live endpoints:
+
+```text
+VITE_API_BASE_LOCAL=http://127.0.0.1:3000
+VITE_API_BASE_LIVE=https://your-api-id.execute-api.your-region.amazonaws.com
+VITE_APP_ENV=development
 ```
+
+`VITE_APP_ENV=production` hides development-only UI such as the
+"Behind the scenes" panel. The Vite mode and product UI environment are
+separate.
 
 To reset local player state:
 
@@ -122,10 +136,28 @@ pnpm dynamodb:delete-table
 pnpm dynamodb:create-table
 ```
 
+## API
+
+Routes:
+
+- `GET /health`
+- `GET /price`
+- `GET /state`
+- `POST /guesses`
+- `POST /guesses/resolve`
+
+Game routes require `x-user-id`. Local CORS allows `http://localhost:5173` and
+`http://127.0.0.1:5173`.
+
+The shared contract in `packages/api-contract/src/index.ts` defines response
+and request types for the client and server. Public feedback codes include
+`NONE`, `GUESS_CREATED`, `NOT_READY`, `PRICE_UNCHANGED`,
+`RESOLUTION_PENDING`, and `RESOLVED`.
+
 ## Backend Configuration
 
-Local SAM defaults are defined in `server/template.yaml`. The main environment
-variables are:
+Local SAM defaults are defined in `server/template.yaml`. Main environment
+variables:
 
 - `COINGECKO_PRICE_URL`
 - `COINGECKO_REQUEST_TIMEOUT_MS`
@@ -137,66 +169,62 @@ variables are:
 - `PLAYER_TABLE_NAME`
 - `DYNAMODB_ENDPOINT`
 
-The local server start script points the Lambda container at DynamoDB Local via
-`http://host.docker.internal:8000`.
+`pnpm start:server` runs `sam build` and starts the local API with
+`DynamoDbEndpoint=http://host.docker.internal:8000` so the Lambda container can
+reach DynamoDB Local.
 
-## Production Deployment
+Without `PLAYER_TABLE_NAME`, the app composition root falls back to the
+in-memory player store. With `PLAYER_TABLE_NAME`, it uses DynamoDB.
 
-The application is designed to deploy as a static frontend plus an AWS-backed
-API. The backend uses AWS Lambda, API Gateway HTTP API, and DynamoDB through the
-SAM template in `server/template.yaml`. The frontend can be hosted by any static
-site host, such as AWS Amplify Hosting, S3 + CloudFront, Vercel, or Netlify.
+## Deployment
 
-### First-Time AWS Setup
+The production shape is a static frontend plus an AWS-backed API. The backend
+SAM template creates:
 
-To deploy the backend to AWS from a new machine or AWS account, install and
-configure:
+- API Gateway HTTP API
+- Lambda function running Node.js 24
+- DynamoDB table for player score and active-guess state
+- CloudWatch log group with seven-day retention
 
-- Node.js and pnpm, matching the versions in the Requirements section.
-- AWS CLI v2.
-- AWS SAM CLI.
-- An AWS account with permission to create CloudFormation stacks, IAM roles,
-  Lambda functions, API Gateway HTTP APIs, DynamoDB tables, S3 deployment
-  buckets, and CloudWatch log groups.
+The DynamoDB table uses provisioned billing with
+`ReadCapacityUnits=1` and `WriteCapacityUnits=1`, which is appropriate for this
+low-traffic coding exercise but should be revisited for unpredictable traffic.
 
-Configure AWS credentials before running SAM:
+### First Backend Deploy
+
+Install and configure AWS CLI v2 and AWS SAM CLI, then verify credentials:
 
 ```bash
-aws configure
 aws sts get-caller-identity
 ```
 
-`aws sts get-caller-identity` should print the AWS account and IAM identity that
-will own the deployment. If it fails, fix AWS credentials before deploying.
-
-Install project dependencies and run the checks:
+Run checks before deploying:
 
 ```bash
-pnpm install
 pnpm lint
 pnpm typecheck
-pnpm --dir client test
-pnpm --dir server test
+pnpm test
 ```
 
-Generate a signing secret for the first backend deploy:
+Generate a signing secret:
 
 ```bash
 openssl rand -base64 32
 ```
 
-Do not commit this value. SAM asks for it as `SnapshotSigningSecret`; the
-CloudFormation parameter is marked `NoEcho`, so normal stack views do not show
-it in plain text.
+Do not commit this value. `SnapshotSigningSecret` is a `NoEcho`
+CloudFormation parameter, which is acceptable for this exercise. For a
+production system, store secrets in AWS Secrets Manager or SSM Parameter Store
+and grant the Lambda least-privilege read access.
 
-Run the guided backend deploy from the repository root:
+Build and run the guided deploy:
 
 ```bash
 pnpm --dir server build
 sam deploy --guided --template-file server/.aws-sam/build/template.yaml
 ```
 
-Recommended guided deploy answers:
+Recommended guided values:
 
 ```text
 Stack Name: epilot-btc-game
@@ -214,143 +242,48 @@ SAM configuration file: server/samconfig.toml
 SAM configuration environment: default
 ```
 
-SAM may ask the unauthenticated API question once per route. That is expected
-because the same Lambda is attached to multiple public browser endpoints.
+SAM may ask the unauthenticated API question once per route because the same
+Lambda is attached to multiple public browser endpoints.
 
-After the first successful deploy, SAM prints a `GameApiUrl` output. Use that
-URL as the frontend API base URL.
+After the first deploy, SAM prints `GameApiUrl`. Use that value as
+`VITE_API_BASE_LIVE`.
 
-Subsequent backend deploys can run from the repository root:
+Subsequent backend deploys:
 
 ```bash
 pnpm deploy:server
 ```
 
-This script builds the server and deploys using `server/samconfig.toml`.
+### Frontend Deploy
 
-### Backend
-
-The backend SAM stack creates:
-
-- an API Gateway HTTP API for the game endpoints;
-- a Lambda function running the TypeScript backend build;
-- a DynamoDB table for persisted player score and active-guess state.
-
-The DynamoDB table name is controlled by the `PlayerTableName` SAM parameter.
-The Lambda receives that value through `PLAYER_TABLE_NAME`, so production state
-is stored in DynamoDB rather than the in-memory fallback.
-
-The table uses DynamoDB provisioned billing with `ReadCapacityUnits=1` and
-`WriteCapacityUnits=1`. This is intentional for a low-traffic pet-project
-deployment: provisioned capacity keeps the table inside the DynamoDB free-tier
-capacity allowance as long as usage stays within the account's free-tier limits.
-On-demand billing is easier for unpredictable production traffic, but it is
-metered per request and can produce charges if the app is hit repeatedly or a
-test loop makes many requests. This template optimizes for predictable free-tier
-usage rather than burst capacity.
-
-The deployment template also exposes these production-facing parameters:
-
-- `FrontendOrigin`: the deployed frontend origin, for example
-  `https://btc-game.example.com`.
-- `SnapshotSigningSecret`: a strong random secret used to sign price snapshot
-  tokens. The parameter is marked with `NoEcho: true` so CloudFormation does not
-  display it in plain text in normal stack views.
-- `PlayerTableName`: the DynamoDB table name for player state.
-
-`FrontendOrigin` is used with `http://localhost:5173` and
-`https://dev.d1cgb3966fmmq6.amplifyapp.com` for both
-`GameApi.CorsConfiguration.AllowOrigins` and the Lambda `CORS_ALLOWED_ORIGINS`
-environment variable, so the deployed API can be called from the hosted frontend
-and local development frontend.
-`SnapshotSigningSecret` is used for the Lambda `SNAPSHOT_SIGNING_SECRET`
-environment variable.
-
-For production, also review these Lambda environment values in
-`server/template.yaml`:
-
-- `COINGECKO_PRICE_URL`: the BTC/USD price endpoint. The default uses
-  CoinGecko's simple price API.
-- `COINGECKO_REQUEST_TIMEOUT_MS`: request timeout for the price provider.
-- `PROVIDER_CACHE_TTL_MS`: backend price cache TTL. This limits third-party API
-  calls while still serving the latest price available to the backend. Keep it
-  below the client polling interval and snapshot validity window.
-- `SNAPSHOT_VALIDITY_MS`: how long a signed price snapshot token can be used to
-  create a guess. The client does not use this value for refresh timing.
-- `GUESS_ELIGIBILITY_MS`: the minimum guess duration. The exercise value is
-  `60000`.
-
-For a temporary deployment, the first backend deploy can use the local default
-frontend origin:
-
-```text
-FrontendOrigin=http://localhost:5173
-```
-
-After the frontend is deployed, redeploy the backend with `FrontendOrigin` set
-to the real frontend origin, such as
-`https://main.d1cgb3966fmmq6.amplifyapp.com`, so browser CORS checks allow API
-calls from the hosted site. SAM prints the API Gateway URL through the
-`GameApiUrl` stack output. Use that URL as the frontend API base URL.
-
-#### Production note: secret management
-
-For a production deployment, sensitive values such as `SNAPSHOT_SIGNING_SECRET`
-should not be passed directly as plain CloudFormation parameters or stored
-directly in Lambda environment variables.
-
-A more production-suitable approach would be to store secrets in **AWS Secrets
-Manager** and allow the Lambda function to retrieve them at runtime using an IAM
-role with least-privilege access. Secrets Manager is designed for application
-secrets such as API keys, database credentials, signing secrets, and third-party
-tokens. It supports encryption using AWS KMS, IAM-based access control, secret
-versioning, and automatic rotation where applicable.
-
-For simpler configuration values, **AWS Systems Manager Parameter Store** can
-also be used. Non-sensitive values can be stored as regular parameters, while
-sensitive values can be stored as `SecureString` parameters encrypted with AWS
-KMS.
-
-In this project, using a `NoEcho` CloudFormation parameter is acceptable for a
-lightweight coding-challenge deployment because it avoids hardcoding the secret
-in the template or source code. However, for production, Secrets Manager or SSM
-Parameter Store would provide better separation between infrastructure
-configuration and secret lifecycle management.
-
-### Frontend
-
-Build the frontend with the deployed API URL from an environment variable:
+Build the frontend with the deployed API URL:
 
 ```bash
 VITE_API_BASE_LIVE=https://your-api-id.execute-api.your-region.amazonaws.com pnpm --dir client build:live
 ```
 
-Deploy the generated `client/dist` directory to the static host of your choice.
-In hosted build environments such as AWS Amplify, configure
-`VITE_API_BASE_LIVE` as a build environment variable. Set
-`VITE_APP_ENV=production` only when the deployed client should hide the
-development-only "Behind the scenes" panel.
+Deploy `client/dist` to a static host. The included `amplify.yml` installs with
+pnpm, runs `pnpm --dir client run build`, and publishes `client/dist`.
 
-After the frontend is live, verify the deployed app by:
-
-- opening the frontend URL in a fresh browser session;
-- confirming the score starts at `0`;
-- confirming the BTC/USD price loads;
-- submitting one `up` or `down` guess;
-- confirming the controls are disabled while the guess is pending;
-- waiting at least 60 seconds and confirming the score changes once the backend
-  resolves the guess;
-- closing and reopening the browser to confirm the same anonymous browser ID
-  still sees its persisted score.
+After the frontend URL is known, redeploy the backend with `FrontendOrigin`
+set to that browser origin so CORS allows hosted calls. The template always
+also allows local development and the dev Amplify origin.
 
 ## Quality Checks
 
 ```bash
 pnpm lint
 pnpm typecheck
+pnpm test
+pnpm format:check
+```
+
+Package-specific checks:
+
+```bash
 pnpm --dir client test
 pnpm --dir server test
-pnpm format:check
+pnpm --dir server typecheck
 ```
 
 ## More Documentation

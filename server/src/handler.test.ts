@@ -757,6 +757,35 @@ test('eligible guess bypasses cached pre-eligibility price for resolution', asyn
   assert.equal(context.calls, 3);
 });
 
+test('eligible guess bypasses expired cached pre-eligibility price for resolution', async () => {
+  const context = createTestHandler([100, 101, 102], {
+    providerCacheTtlMs: 15_000,
+    snapshotValidityMs: 10_000,
+  });
+  const priceState = await getPriceState(context.handler);
+  await context.handler(
+    event('POST', '/guesses', {
+      direction: 'UP',
+      priceSnapshotId: priceState.price!.priceSnapshotId,
+    }),
+  );
+  context.advance(58_000);
+  await context.handler(event('GET', '/price'));
+  context.advance(2_000);
+
+  const response = await context.handler(event('GET', '/state'));
+  const body = json<GameStateResponse>(response);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.feedback.type, 'RESOLVED');
+  assert.equal(body.score, 1);
+  assert.equal(body.activeGuess, null);
+  assert.equal(body.latestPrice?.priceUsd, 102);
+  assert.equal(body.latestPrice?.observedAt, '2026-06-25T12:01:00.000Z');
+  assert.equal(body.latestPriceCanCreateGuess, true);
+  assert.equal(context.calls, 3);
+});
+
 test('correct guess increments score', async () => {
   const context = createTestHandler([100, 101]);
   const priceState = await getPriceState(context.handler);

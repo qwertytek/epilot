@@ -34,6 +34,7 @@ export type PriceProvider = (() => Promise<number>) & {
 
 export type InternalPriceSnapshot = PriceSnapshot & {
   canCreateGuess: boolean;
+  isStaleFallback?: boolean;
 };
 
 export type PriceSnapshotFactory = (() => Promise<InternalPriceSnapshot>) & {
