@@ -48,9 +48,13 @@ export const toGamePageViewModel = ({
     animationPreviousPrice: priceAnimation?.previousPrice,
     animationTone: priceAnimation?.tone,
     isRefreshing: price.priceStateQuery.isFetching,
+    isStale: session.activeGuess === null && price.isPriceUnavailable,
     lastBet: session.gameState?.lastBet
       ? formatCurrencyUsd(session.gameState.lastBet.priceUsd)
       : null,
+    onRefresh: () => {
+      void price.priceStateQuery.refetch();
+    },
     observedAt: price.currentPrice ? price.currentPrice.observedAt : null,
     pollIntervalMs: pricePollIntervalMs,
     price: price.currentPrice

@@ -32,6 +32,20 @@
   min-height: 3.5rem;
 }
 
+.game-guess-status {
+  display: flex;
+  min-height: 3.5rem;
+  align-items: center;
+  border: 1px solid var(--color-brand-border);
+  border-radius: 1rem;
+  background: white;
+  padding: 0.75rem 1.25rem;
+  color: var(--color-brand-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
 .game-guess-state {
   align-content: center;
   min-height: 13rem;

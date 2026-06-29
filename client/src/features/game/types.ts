@@ -12,7 +12,9 @@ export type PriceDisplayProps = {
   animationPreviousPrice?: string;
   animationTone?: 'success' | 'error' | 'neutral';
   isRefreshing?: boolean;
+  isStale?: boolean;
   lastBet: string | null;
+  onRefresh: () => void;
   observedAt: string | null;
   pollIntervalMs: number;
   price: string | null;
@@ -29,6 +31,7 @@ export type GuessControlsProps = {
 export type PendingGuessProps = {
   direction: GuessDirection;
   eligibleAt: string;
+  headingId?: string;
 };
 
 export type GameFeedbackProps = {

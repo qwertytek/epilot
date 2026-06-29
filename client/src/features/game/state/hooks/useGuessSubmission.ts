@@ -10,6 +10,33 @@ import type {
   usePriceStateQuery,
 } from '#src/features/game/data/queries';
 
+export const getGuessDisabledReason = ({
+  hasActiveGuess,
+  isInitialPriceLoading,
+  isPriceUnavailable,
+  isSubmitting,
+  canUsePrice,
+  hasGameState,
+}: {
+  hasActiveGuess: boolean;
+  isInitialPriceLoading: boolean;
+  isPriceUnavailable: boolean;
+  isSubmitting: boolean;
+  canUsePrice: boolean;
+  hasGameState: boolean;
+}) =>
+  hasActiveGuess
+    ? 'Your previous guess is still being resolved.'
+    : isSubmitting
+      ? 'Submitting your guess...'
+      : isPriceUnavailable
+        ? null
+        : !hasGameState || isInitialPriceLoading
+          ? 'Fetching the latest price before you can bet.'
+          : !canUsePrice
+            ? 'Price is temporarily unavailable. Waiting for the next refresh.'
+            : null;
+
 export const useGuessSubmission = ({
   activeGuess,
   currentPrice,
@@ -36,16 +63,14 @@ export const useGuessSubmission = ({
   const isSubmitting = createGuessMutation.isPending;
   const isBusy =
     gameStateQuery.isLoading || priceStateQuery.isLoading || isSubmitting;
-  const disabledReason =
-    activeGuess !== null
-      ? 'Your previous guess is still being resolved.'
-      : isSubmitting
-        ? 'Submitting your guess...'
-        : gameState === null || isInitialPriceLoading
-          ? 'Fetching the latest price before you can bet.'
-          : isPriceUnavailable || !canUsePrice
-            ? 'Price is temporarily unavailable. Waiting for the next refresh.'
-            : null;
+  const disabledReason = getGuessDisabledReason({
+    canUsePrice,
+    hasActiveGuess: activeGuess !== null,
+    hasGameState: gameState !== null,
+    isInitialPriceLoading,
+    isPriceUnavailable,
+    isSubmitting,
+  });
   const canGuess =
     gameState !== null &&
     currentPrice !== null &&

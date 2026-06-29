@@ -30,18 +30,24 @@ export const GuessPanel = ({
 
   if (activeGuess) {
     return (
-      <div className="game-guess-state grid gap-4">
-        <PendingGuess
-          direction={activeGuess.direction}
-          eligibleAt={formatDateTime(activeGuess.eligibleAt)}
-        />
-        <p className="rounded-2xl border border-brand-border bg-white px-5 py-3 text-sm font-semibold text-brand-primary">
-          {disabledReason ?? 'Your previous guess is still being resolved.'}{' '}
-          {resolveWaitSeconds > 0
-            ? `Checking results in ${resolveWaitSeconds}s.`
-            : 'Checking for results...'}
-        </p>
-      </div>
+      <section
+        aria-labelledby="current-guess-heading"
+        className="game-guess-panel"
+      >
+        <div className="game-guess-state grid gap-4">
+          <PendingGuess
+            direction={activeGuess.direction}
+            eligibleAt={formatDateTime(activeGuess.eligibleAt)}
+            headingId="current-guess-heading"
+          />
+          <p className="game-guess-status">
+            {disabledReason ?? 'Your previous guess is still being resolved.'}{' '}
+            {resolveWaitSeconds > 0
+              ? `Checking results in ${resolveWaitSeconds}s.`
+              : 'Checking for results...'}
+          </p>
+        </div>
+      </section>
     );
   }
 
