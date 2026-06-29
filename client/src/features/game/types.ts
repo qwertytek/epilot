@@ -12,6 +12,7 @@ export type PriceDisplayProps = {
   animationPreviousPrice?: string;
   animationTone?: 'success' | 'error' | 'neutral';
   isRefreshing?: boolean;
+  isResolutionAlmostReady?: boolean;
   lastBet: string | null;
   observedAt: string | null;
   pollIntervalMs: number;

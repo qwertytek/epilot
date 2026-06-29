@@ -65,6 +65,7 @@ export const PriceDisplay = ({
   animationPreviousPrice,
   animationTone,
   isRefreshing = false,
+  isResolutionAlmostReady = false,
   lastBet,
   observedAt,
   pollIntervalMs,
@@ -142,7 +143,9 @@ export const PriceDisplay = ({
         )}
       </p>
       <p className="mt-3 text-sm text-brand-muted">
-        {isUpdatingExistingPrice ? (
+        {isResolutionAlmostReady ? (
+          'the results are almost ready'
+        ) : isUpdatingExistingPrice ? (
           <>
             checking latest price
             <span

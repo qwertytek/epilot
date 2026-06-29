@@ -5,10 +5,28 @@ import { useGameSession } from '#src/features/game/state/hooks/useGameSession';
 import { useGuessSubmission } from '#src/features/game/state/hooks/useGuessSubmission';
 import { usePriceAnimation } from '#src/features/game/state/hooks/usePriceAnimation';
 import { toGamePageViewModel } from '#src/features/game/state/viewModel';
+import type { ActiveGuess } from '@epilot/api-contract';
+
+const finalPricePollingPauseSeconds = 20;
+
+export const shouldPollLivePrice = ({
+  activeGuess,
+  resolveWaitSeconds,
+}: {
+  activeGuess: ActiveGuess | null;
+  resolveWaitSeconds: number;
+}) =>
+  activeGuess === null || resolveWaitSeconds > finalPricePollingPauseSeconds;
 
 export const useGamePageState = () => {
   const session = useGameSession();
-  const price = useGamePriceState();
+  const { resolveWaitSeconds } = useResolveCountdown(session.activeGuess);
+  const price = useGamePriceState({
+    shouldPollPrice: shouldPollLivePrice({
+      activeGuess: session.activeGuess,
+      resolveWaitSeconds,
+    }),
+  });
   const notifications = useGameNotifications({
     createGuessMutation: session.createGuessMutation,
     gameState: session.gameState,
@@ -27,7 +45,6 @@ export const useGamePageState = () => {
     isPriceUnavailable: price.isPriceUnavailable,
     priceStateQuery: price.priceStateQuery,
   });
-  const { resolveWaitSeconds } = useResolveCountdown(session.activeGuess);
   const resolvedOutcome =
     session.gameState?.feedback.type === 'RESOLVED'
       ? session.gameState.feedback.outcome

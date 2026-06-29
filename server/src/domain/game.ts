@@ -45,6 +45,55 @@ export const createGameService = ({
       Awaited<ReturnType<PlayerStore['getOrCreate']>>['activeGuess']
     >,
   ): Promise<ResolveGuessResponse> => {
+    const resolveWithLatestPrice = async (
+      latestPrice: PriceSnapshot,
+      latestPriceCanCreateGuess: boolean,
+    ): Promise<ResolveGuessResponse> => {
+      const observedPriceUsd = latestPrice.priceUsd;
+
+      if (observedPriceUsd === activeGuess.startPriceUsd) {
+        return {
+          ...players.toPublicState(player),
+          latestPrice,
+          latestPriceCanCreateGuess,
+          feedback: {
+            type: 'PRICE_UNCHANGED',
+          },
+        };
+      }
+
+      const guessedCorrectly =
+        activeGuess.direction === 'UP'
+          ? observedPriceUsd > activeGuess.startPriceUsd
+          : observedPriceUsd < activeGuess.startPriceUsd;
+      const scoreDelta = guessedCorrectly ? 1 : -1;
+
+      const resolvedPlayer = await players
+        .resolveGuess(userId, {
+          activeGuess,
+          scoreDelta,
+          updatedAt: now().toISOString(),
+        })
+        .catch((error: unknown) => {
+          if (error instanceof Error && error.message === 'NO_ACTIVE_GUESS') {
+            throw new ApiError(409, 'NO_ACTIVE_GUESS');
+          }
+
+          throw error;
+        });
+
+      return {
+        ...players.toPublicState(resolvedPlayer),
+        latestPrice,
+        latestPriceCanCreateGuess,
+        feedback: {
+          type: 'RESOLVED',
+          outcome: guessedCorrectly ? 'CORRECT' : 'INCORRECT',
+          scoreDelta,
+        },
+      };
+    };
+
     let internalLatestPrice: InternalPriceSnapshot;
 
     try {
@@ -65,8 +114,44 @@ export const createGameService = ({
       throw error;
     }
 
-    const latestPrice = toPublicPriceSnapshot(internalLatestPrice);
-    const observedPriceUsd = latestPrice.priceUsd;
+    let latestPrice = toPublicPriceSnapshot(internalLatestPrice);
+
+    if (
+      internalLatestPrice.canCreateGuess &&
+      Date.parse(latestPrice.observedAt) < Date.parse(activeGuess.eligibleAt) &&
+      createPriceSnapshot.createFreshSnapshot !== undefined
+    ) {
+      try {
+        internalLatestPrice = await createPriceSnapshot.createFreshSnapshot();
+        latestPrice = toPublicPriceSnapshot(internalLatestPrice);
+      } catch (error) {
+        if (
+          error instanceof ApiError &&
+          error.code === 'PRICE_PROVIDER_UNAVAILABLE'
+        ) {
+          if (
+            internalLatestPrice.canCreateGuess &&
+            latestPrice.priceUsd !== activeGuess.startPriceUsd
+          ) {
+            return resolveWithLatestPrice(
+              latestPrice,
+              internalLatestPrice.canCreateGuess,
+            );
+          }
+
+          return {
+            ...players.toPublicState(player),
+            latestPrice,
+            latestPriceCanCreateGuess: internalLatestPrice.canCreateGuess,
+            feedback: {
+              type: 'RESOLUTION_PENDING',
+            },
+          };
+        }
+
+        throw error;
+      }
+    }
 
     if (
       !internalLatestPrice.canCreateGuess ||
@@ -82,47 +167,10 @@ export const createGameService = ({
       };
     }
 
-    if (observedPriceUsd === activeGuess.startPriceUsd) {
-      return {
-        ...players.toPublicState(player),
-        latestPrice,
-        latestPriceCanCreateGuess: internalLatestPrice.canCreateGuess,
-        feedback: {
-          type: 'PRICE_UNCHANGED',
-        },
-      };
-    }
-
-    const guessedCorrectly =
-      activeGuess.direction === 'UP'
-        ? observedPriceUsd > activeGuess.startPriceUsd
-        : observedPriceUsd < activeGuess.startPriceUsd;
-    const scoreDelta = guessedCorrectly ? 1 : -1;
-
-    const resolvedPlayer = await players
-      .resolveGuess(userId, {
-        activeGuess,
-        scoreDelta,
-        updatedAt: now().toISOString(),
-      })
-      .catch((error: unknown) => {
-        if (error instanceof Error && error.message === 'NO_ACTIVE_GUESS') {
-          throw new ApiError(409, 'NO_ACTIVE_GUESS');
-        }
-
-        throw error;
-      });
-
-    return {
-      ...players.toPublicState(resolvedPlayer),
+    return resolveWithLatestPrice(
       latestPrice,
-      latestPriceCanCreateGuess: internalLatestPrice.canCreateGuess,
-      feedback: {
-        type: 'RESOLVED',
-        outcome: guessedCorrectly ? 'CORRECT' : 'INCORRECT',
-        scoreDelta,
-      },
-    };
+      internalLatestPrice.canCreateGuess,
+    );
   };
 
   const getState = async (userId: string): Promise<GameStateResponse> => {
